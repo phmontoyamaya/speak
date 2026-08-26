@@ -386,7 +386,9 @@ function segment(frames,frameMs,opts){
   const o=Object.assign({minPauseMs:280,absFloor:.004,noiseMult:1.8,speechFrac:.10},opts||{});
   if(!frames.length)return{voiced:[],pauses:[],floor:0};
   const s=frames.map(f=>f.rms).sort((a,b)=>a-b);
-  const floor=Math.max(o.absFloor,percentile(s,.05)*o.noiseMult,percentile(s,.95)*o.speechFrac);
+  const noise=percentile(s,.05),speech=percentile(s,.95);
+  // cap the noise term: on near-constant audio it would exceed the signal
+  const floor=Math.max(o.absFloor,Math.min(noise*o.noiseMult,speech*0.5),speech*o.speechFrac);
   const v=frames.map(f=>f.rms>=floor);
   for(let i=1;i<v.length-1;i++)if(!v[i]&&v[i-1]&&v[i+1])v[i]=true;
   const runs=[];let st=0;
@@ -495,8 +497,9 @@ function analyze(input){
   for(const t of fillerTimes.concat([durationMs])){longestRunMs=Math.max(longestRunMs,t-prevT);prevT=t;}
   return{
     durationMs,words,
-    speechRate:words/(durationMs/60000),
-    articulationRate:words/(speakingMs/60000),
+    speechRate:durationMs>0?words/(durationMs/60000):NaN,
+    // meaningless without voiced-time measurement; NaN, never a huge number
+    articulationRate:(frames.length&&voicedMs>500)?words/(speakingMs/60000):NaN,
     fillerPer100:words?(totalFillers/words)*100:0,
     fillersLexical:lexFillers,fillersAcoustic:filled.length,fillersTotal:totalFillers,
     hedgePer100:words?(hedges/words)*100:0,
@@ -659,12 +662,20 @@ let currentPrompt=currentDrill.prompts[Math.floor(Math.random()*currentDrill.pro
 
 /* baseline = median of the first five sessions for a given metric */
 const CAL=5;
+/* A session only contributes to a baseline for metrics it actually measured.
+   Otherwise a mode that skips half the metrics drags them all toward zero. */
+function measuredIn(session,metric){
+  const def=MBY[metric]; if(!def)return false;
+  const v=session.m?session.m[metric]:undefined;
+  if(typeof v!=='number'||!isFinite(v))return false;
+  return !withheldWhy(def,missing(session));
+}
 function baseline(metric){
-  const vals=sessions.slice(0,CAL).map(s=>s.m[metric]).filter(v=>typeof v==='number'&&isFinite(v));
+  const vals=sessions.filter(s=>measuredIn(s,metric)).slice(0,CAL).map(s=>s.m[metric]);
   return vals.length>=3?median(vals):null;
 }
 function recent(metric,n){
-  const vals=sessions.slice(-(n||5)).map(s=>s.m[metric]).filter(v=>typeof v==='number'&&isFinite(v));
+  const vals=sessions.filter(s=>measuredIn(s,metric)).slice(-(n||5)).map(s=>s.m[metric]);
   return vals.length?median(vals):null;
 }
 
@@ -738,10 +749,14 @@ function scoreOf(m,v){
 /* ============================================================
    COACHING RULES
    ============================================================ */
-function diagnose(m,drill){
+function diagnose(m,drill,gap){
   const out=[];
   const base=k=>baseline(k);
   const push=(pri,title,body)=>out.push({pri,title,body});
+  // never advise on a number the scorecard is withholding
+  const g=gap||{words:m.words<MIN_WORDS,audio:!(m.pauseCount>0||isFinite(m.pitchRangeSt)),mode:(drill&&drill._mode)||'words'};
+  const has=k=>{ const d=MBY[k]; const v=m[k];
+    return typeof v==='number'&&isFinite(v)&&d&&!withheldWhy(d,g); };
 
   if(m.words<MIN_WORDS){
     const gotAudio=isFinite(m.pitchRangeSt)||m.pauseCount>0;
@@ -762,47 +777,55 @@ function diagnose(m,drill){
     return out;
   }
 
-  if(m.fillerPer100>5) push(1,'Fillers are running the sentence',
+  if(has('fillerPer100')&&m.fillerPer100>5) push(1,'Fillers are running the sentence',
     `${m.fillerPer100.toFixed(1)} per hundred words, ${m.fillersAcoustic} of them filled pauses in the audio. The fix is not fewer words, it is silence in the same slot. Tomorrow, run Silence Over Filler and let every stall be soundless.`);
-  else if(m.fillerPer100>3) push(3,'Fillers are present but not loud',
+  else if(has('fillerPer100')&&m.fillerPer100>3) push(3,'Fillers are present but not loud',
     `${m.fillerPer100.toFixed(1)} per hundred words. Close to the point where a listener stops noticing. Hold it here.`);
 
-  if(m.swapRatio<1&&m.fillersTotal>2) push(1,'You are filling instead of pausing',
+  if(has('swapRatio')&&m.swapRatio<1&&m.fillersTotal>2) push(1,'You are filling instead of pausing',
     `${m.pauseCount} silent pauses against ${m.fillersTotal} fillers. The hesitation is happening either way — right now it is coming out voiced. Moving it to silence is the entire trade.`);
 
-  if(m.openingLatencyMs>7000) push(1,'The point arrives late',
+  if(has('openingLatencyMs')&&m.openingLatencyMs>7000) push(1,'The point arrives late',
     `${(m.openingLatencyMs/1000).toFixed(1)} seconds of runway before the first substantive word. In a board room that is the window where attention is decided. Try opening with the conclusion and letting the setup follow.`);
-  else if(m.weakOpenerRate>.35) push(2,'Most units open with a stall',
+  else if(has('weakOpenerRate')&&m.weakOpenerRate>.35) push(2,'Most units open with a stall',
     `${Math.round(m.weakOpenerRate*100)}% of what you said began with "so", "well", "I think" or similar. Each one is a free half-second that tells the listener nothing. Delete the first three words and start again.`);
 
-  if(isFinite(m.pitchRangeSt)&&m.pitchRangeSt<4) push(1,'Pitch is close to flat',
+  if(has('pitchRangeSt')&&m.pitchRangeSt<4) push(1,'Pitch is close to flat',
     `${m.pitchRangeSt.toFixed(1)} semitones between your low and high. Flat delivery reads as either bored or uncertain regardless of what the words say. Range is trainable in a way accent is not, so this is worth the minutes.`);
-  else if(isFinite(m.pitchRangeSt)&&m.pitchRangeSt<6) push(3,'Pitch range is narrow',
+  else if(has('pitchRangeSt')&&m.pitchRangeSt<6) push(3,'Pitch range is narrow',
     `${m.pitchRangeSt.toFixed(1)} semitones. There is room to open this up, particularly on the word that carries the sentence.`);
 
-  if(m.articulationRate>190) push(2,'You are outrunning the room',
+  if(has('articulationRate')&&m.articulationRate>190) push(2,'You are outrunning the room',
     `${Math.round(m.articulationRate)} wpm of actual speaking. Fast speech is where a second-language accent costs the most, because the listener has no slack for processing. Slowing to about 150 buys back more clarity than any pronunciation work would.`);
-  else if(m.articulationRate<115&&m.words>40) push(3,'Pace is on the slow side',
+  else if(has('articulationRate')&&m.articulationRate<115&&m.words>40) push(3,'Pace is on the slow side',
     `${Math.round(m.articulationRate)} wpm. Deliberate is good; this is far enough down that it may read as effortful.`);
 
-  if(m.hedgePer100>6) push(2,'Hedging is undercutting the claim',
+  if(has('speechRate')&&!has('articulationRate')){
+    if(m.speechRate>200) push(2,'You are outrunning the room',
+      Math.round(m.speechRate)+' words a minute across the whole session. Fast speech is where a second-language accent costs the most, because the listener has no slack for processing. Slowing toward 150 buys back more clarity than any pronunciation work would.');
+    else if(m.speechRate<90&&m.words>40) push(3,'The pace is very deliberate',
+      Math.round(m.speechRate)+' words a minute including pauses. Measured is good; this far down can read as effortful, and it usually means the sentence is being assembled while it is spoken rather than before.');
+  }
+
+  if(has('hedgePer100')&&m.hedgePer100>6) push(2,'Hedging is undercutting the claim',
     `${m.hedgePer100.toFixed(1)} qualifiers per hundred words. "I think" before a fact you actually know invites the room to discount it. Say it flat, or say you are not sure — the middle setting costs you both ways.`);
 
-  if(isFinite(m.trailOff)&&m.trailOff<.65) push(2,'Your sentences fade at the end',
+  if(has('trailOff')&&m.trailOff<.65) push(2,'Your sentences fade at the end',
     `Ending energy is ${Math.round(m.trailOff*100)}% of opening energy. The last three words are usually the ones that carry the point, and they are the ones going quiet.`);
 
-  if(isFinite(m.sentenceMean)&&m.sentenceMean>24) push(3,'Units are running long',
+  if(has('sentenceMean')&&m.sentenceMean>24) push(3,'Units are running long',
     `${m.sentenceMean.toFixed(0)} words on average. Somewhere past twenty the listener starts holding too much open at once.`);
 
   // improvement, measured against the calibration baseline
   const wins=[];
   for(const k of ['fillerPer100','hedgePer100','openingLatencyMs','weakOpenerRate']){
+    if(!has(k))continue;
     const b=base(k); const v=m[k];
-    if(b!==null&&isFinite(v)&&b>0&&v<b*.75) wins.push(MBY[k].name.toLowerCase());
+    if(b!==null&&b>0&&v<b*.75) wins.push(MBY[k].name.toLowerCase());
   }
-  for(const k of ['pitchRangeSt','articulationRate']){
-    const b=base(k); const v=m[k];
-    if(b!==null&&isFinite(v)&&k==='pitchRangeSt'&&v>b*1.2) wins.push('pitch range');
+  if(has('pitchRangeSt')){
+    const b=base('pitchRangeSt');
+    if(b!==null&&m.pitchRangeSt>b*1.2) wins.push('pitch range');
   }
   if(wins.length) push(4,'Better than your baseline',
     `Improved against your first-five median on ${wins.join(', ')}. That is the number that matters — not the absolute value.`);
@@ -838,7 +861,8 @@ function nextDrill(diags){
 function renderToday(){
   $('streak-n').textContent=streak();
   const d=currentDrill;
-  $('d-eyebrow').textContent = sessions.length<CAL ? 'Calibrating · session '+(sessions.length+1)+' of '+CAL : 'Today · trains '+d.trains.toLowerCase();
+  const usable=sessions.filter(x=>x.m&&x.m.words>=MIN_WORDS||measuredIn(x,'pitchRangeSt')).length;
+  $('d-eyebrow').textContent = usable<CAL ? 'Calibrating · '+usable+' of '+CAL+' usable sessions' : 'Today · trains '+d.trains.toLowerCase();
   $('d-name').textContent=d.name;
   $('d-sub').textContent=d.sub;
   $('d-who').textContent=currentPrompt.who;
@@ -1121,6 +1145,7 @@ async function start(){
        frames:[],chunks:[],interim:'',wordEvents:[],seen:0,
        t0:performance.now(),raf:0,lastFrame:-1,sr:null,
        heard:false,srState:mode==='words'?'starting':'off',srError:null,deafWarned:false,
+       committed:[],live:[],
        ctx:null,stream:null,an:null,buf:null,mr:null,blobs:[],audioBlob:null};
 
   $('rec-label').textContent='Recording · '+drill.name;
@@ -1236,14 +1261,18 @@ function startRecognition(){
     r.onresult=e=>{
       if(!rec.active)return;
       rec.heard=true;
-      let interim='';
-      for(let i=e.resultIndex;i<e.results.length;i++){
+      // e.results is cumulative and gets re-delivered as it grows, so this
+      // must REBUILD from it, never append. Appending duplicated every prefix.
+      const finals=[]; let interim='';
+      for(let i=0;i<e.results.length;i++){
         const res=e.results[i];
-        const txt=res[0].transcript.trim();
-        if(res.isFinal){ if(txt)rec.chunks.push(txt); }
-        else interim+=txt+' ';
+        const txt=(res[0]&&res[0].transcript||'').trim();
+        if(!txt)continue;
+        if(res.isFinal)finals.push(txt); else interim+=txt+' ';
       }
-      rec.interim=interim;
+      rec.live=finals;
+      rec.interim=interim.trim();
+      rec.chunks=rec.committed.concat(finals);
       stampWords();
       paintTranscript();
     };
@@ -1262,6 +1291,8 @@ function startRecognition(){
     };
 
     r.onend=()=>{
+      if(rec.live&&rec.live.length){ rec.committed=rec.committed.concat(rec.live); rec.live=[]; }
+      rec.chunks=rec.committed.slice();
       if(rec.active&&rec.sr){
         try{ r.start(); }
         catch(err){ rec.srState='ended'; paintSubsys(); }
@@ -1292,8 +1323,11 @@ function showDeaf(msg){
 function stampWords(){
   const all=tokenize(rec.chunks.join(' ')+' '+rec.interim);
   const t=performance.now()-rec.t0;
-  for(let i=rec.seen;i<all.length;i++)rec.wordEvents.push({tMs:t,word:all[i]});
-  rec.seen=all.length;
+  // the list is rebuilt, not appended, so it can shrink; only stamp growth
+  if(all.length>rec.seen){
+    for(let i=rec.seen;i<all.length;i++)rec.wordEvents.push({tMs:t,word:all[i]});
+  }
+  rec.seen=Math.max(rec.seen,all.length);
 }
 function paintTranscript(){
   const el=$('livetext');
@@ -1414,7 +1448,7 @@ async function stop(){
     prompt:snap.prompt, transcript:snap.chunks.join(' '), m, diags:[],
     mode:snap.mode, wordsOk:snap.wordsOk, srError:snap.srError, hasAudio:!!audioBlob
   };
-  session.diags=diagnose(m,Object.assign({},snap.drill,{_mode:snap.mode}));
+  session.diags=diagnose(m,Object.assign({},snap.drill,{_mode:snap.mode}),missing(session));
   sessions.push(session); save();
   lastAudio=audioBlob;                 // held in memory only, never stored
   renderResult(session); renderToday(); show('result');
