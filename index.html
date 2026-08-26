@@ -1,0 +1,1569 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#EDF1F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B1413" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>*{-webkit-tap-highlight-color:transparent}html{background:#EDF1F0}@media(prefers-color-scheme:dark){html{background:#0B1413}}</style>
+<title>Ten Minutes Out Loud</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+:root{
+  --ground:#EDF1F0; --surface:#FFFFFF; --surface-2:#F5F8F7;
+  --ink:#16211F; --ink-2:#3C4C49; --muted:#63726F; --line:#D3DCDA;
+  --accent:#0E6B67; --accent-soft:#DBEBE9; --accent-ink:#0A4F4C; --on-accent:#FFFFFF;
+  --signal:#BE4620; --signal-soft:#FAE4DB; --on-signal:#FFFFFF;
+  --good:#2C7A50; --warn:#9C7213; --crit:#A83A26;
+  --grid:rgba(22,33,31,.07);
+  --shadow:0 1px 2px rgba(16,32,30,.05), 0 8px 24px -12px rgba(16,32,30,.18);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0B1413; --surface:#111D1B; --surface-2:#162422;
+    --ink:#E3EDEA; --ink-2:#B4C6C2; --muted:#849995; --line:#22322F;
+    --accent:#48C9BD; --accent-soft:#12312F; --accent-ink:#7FDCD2; --on-accent:#06201E;
+    --signal:#FF8355; --signal-soft:#33201A; --on-signal:#2A0F07;
+    --good:#5FBF87; --warn:#D3A945; --crit:#E8705A;
+    --grid:rgba(227,237,234,.07);
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 28px -14px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0B1413; --surface:#111D1B; --surface-2:#162422;
+  --ink:#E3EDEA; --ink-2:#B4C6C2; --muted:#849995; --line:#22322F;
+  --accent:#48C9BD; --accent-soft:#12312F; --accent-ink:#7FDCD2; --on-accent:#06201E;
+  --signal:#FF8355; --signal-soft:#33201A; --on-signal:#2A0F07;
+  --good:#5FBF87; --warn:#D3A945; --crit:#E8705A;
+  --grid:rgba(227,237,234,.07);
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 28px -14px rgba(0,0,0,.7);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.55; -webkit-font-smoothing:antialiased;
+  padding-bottom:84px;
+}
+h1,h2,h3{font-family:Archivo,"IBM Plex Sans",system-ui,sans-serif; text-wrap:balance; margin:0; letter-spacing:-.017em}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-variant-numeric:tabular-nums}
+.wrap{max-width:470px; margin:0 auto; padding:0 18px}
+button{font:inherit; color:inherit; cursor:pointer; border:none; background:none}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:6px}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important; transition-duration:.01ms!important}}
+
+/* ---- masthead ---- */
+.mast{padding:22px 0 14px; display:flex; align-items:flex-start; justify-content:space-between; gap:14px}
+.mast h1{font-size:21px; font-weight:700; line-height:1.15}
+.mast p{margin:5px 0 0; font-size:12.5px; color:var(--muted); letter-spacing:.055em; text-transform:uppercase; font-weight:500}
+.streak{
+  flex:none; text-align:right; font-family:"IBM Plex Mono",monospace;
+  border-left:2px solid var(--accent); padding-left:11px;
+}
+.streak b{display:block; font-size:23px; font-weight:600; line-height:1; color:var(--accent)}
+.streak span{font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em}
+
+/* ---- cards ---- */
+.card{background:var(--surface); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow)}
+.pad{padding:18px}
+.stack{display:flex; flex-direction:column; gap:14px}
+
+.eyebrow{
+  font-family:"IBM Plex Mono",monospace; font-size:10.5px; font-weight:500;
+  letter-spacing:.13em; text-transform:uppercase; color:var(--accent);
+}
+.trains{
+  display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:10px;
+  letter-spacing:.09em; text-transform:uppercase; padding:3px 8px; border-radius:20px;
+  background:var(--accent-soft); color:var(--accent-ink); font-weight:500;
+}
+
+/* ---- drill card ---- */
+.drill h2{font-size:24px; font-weight:700; margin:9px 0 3px}
+.drill .sub{color:var(--muted); font-size:13.5px; margin:0 0 15px}
+.prompt{
+  background:var(--surface-2); border-left:3px solid var(--accent); border-radius:0 9px 9px 0;
+  padding:14px 15px; font-size:16.5px; line-height:1.5; margin-bottom:14px;
+}
+.prompt .who{display:block; font-size:11px; color:var(--muted); letter-spacing:.07em; text-transform:uppercase; margin-bottom:6px; font-weight:600}
+.rules{list-style:none; margin:0 0 16px; padding:0; display:flex; flex-direction:column; gap:7px}
+.rules li{font-size:13.5px; color:var(--ink-2); padding-left:18px; position:relative; line-height:1.45}
+.rules li::before{content:""; position:absolute; left:2px; top:8px; width:5px; height:5px; border-radius:50%; background:var(--accent)}
+
+.btn{
+  display:block; width:100%; text-align:center; padding:15px; border-radius:11px;
+  background:var(--accent); color:var(--on-accent); font-weight:600; font-size:16px;
+  letter-spacing:.01em; border:1px solid transparent; transition:filter .15s;
+}
+.btn:hover{filter:brightness(1.08)}
+.btn[disabled]{opacity:.45; cursor:not-allowed}
+.btn.ghost{background:transparent; border-color:var(--line); color:var(--ink); font-weight:500}
+.btn.stop{background:var(--signal); color:var(--on-signal)}
+.btn.sm{padding:11px; font-size:14px}
+.row2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+
+.swap{
+  margin-top:11px; text-align:center; font-size:13px; color:var(--muted);
+  width:100%; text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--line);
+}
+
+/* ---- live session ---- */
+.live{position:fixed; inset:0; background:var(--ground); z-index:60; display:flex; flex-direction:column; overflow-y:auto}
+.live-inner{max-width:470px; margin:0 auto; width:100%; padding:20px 18px 28px; display:flex; flex-direction:column; min-height:100%}
+.subsys{display:flex; flex-wrap:wrap; gap:6px; margin-top:9px}
+.chip{
+  font-family:"IBM Plex Mono",monospace; font-size:9.5px; letter-spacing:.08em;
+  text-transform:uppercase; padding:3px 8px; border-radius:20px; font-weight:500;
+  border:1px solid var(--line); background:var(--surface-2); color:var(--muted);
+}
+.chip.on{background:var(--accent-soft); color:var(--accent-ink); border-color:transparent}
+.chip.off{background:var(--signal-soft); color:var(--signal); border-color:transparent}
+.deaf{
+  margin-top:11px; padding:11px 13px; border-radius:10px; font-size:13px; line-height:1.5;
+  background:var(--signal-soft); color:var(--signal);
+  border:1px solid color-mix(in srgb, var(--signal) 28%, transparent);
+}
+.rec{display:flex; align-items:center; gap:9px; font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--signal); font-weight:600}
+.dot{width:9px; height:9px; border-radius:50%; background:var(--signal); animation:blip 1.4s ease-in-out infinite}
+@keyframes blip{0%,100%{opacity:1}50%{opacity:.25}}
+.clock{font-family:"IBM Plex Mono",monospace; font-size:66px; font-weight:500; letter-spacing:-.035em; line-height:1; margin:16px 0 4px; font-variant-numeric:tabular-nums}
+.clock.over{color:var(--signal)}
+.clock-note{font-size:12.5px; color:var(--muted); margin:0 0 18px}
+
+.meter{height:44px; width:100%; display:block; border-radius:8px; background:var(--surface-2); border:1px solid var(--line)}
+.livegrid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:1px; background:var(--line); border:1px solid var(--line); border-radius:11px; overflow:hidden; margin-top:16px}
+.livegrid div{background:var(--surface); padding:13px 10px; text-align:center}
+.livegrid b{display:block; font-family:"IBM Plex Mono",monospace; font-size:25px; font-weight:600; line-height:1.1; letter-spacing:-.02em}
+.livegrid span{font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.07em}
+.pacebar{height:9px; border-radius:5px; background:var(--surface-2); margin-top:10px; position:relative; border:1px solid var(--line)}
+.paceband{position:absolute; top:0; bottom:0; background:var(--accent-soft); border-left:1px solid var(--accent); border-right:1px solid var(--accent)}
+.pacepin{position:absolute; top:-3px; bottom:-3px; width:4px; background:var(--ink); border-radius:2px; transition:left .25s}
+.pacelabel{display:flex; justify-content:space-between; font-family:"IBM Plex Mono",monospace; font-size:9.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); margin-top:5px}
+.livetext{
+  flex:1; margin-top:16px; padding:14px; background:var(--surface); border:1px solid var(--line);
+  border-radius:11px; font-size:15px; line-height:1.65; color:var(--ink-2); min-height:110px;
+  overflow-y:auto; max-height:34vh;
+}
+.livetext .interim{color:var(--muted); font-style:italic}
+.livetext .ph{color:var(--muted); font-size:13.5px}
+.live-actions{margin-top:16px; display:flex; flex-direction:column; gap:9px}
+
+/* ---- scorecard ---- */
+.verdict{padding:18px; border-radius:14px; background:var(--accent-soft); border:1px solid var(--line)}
+.verdict h3{font-size:17px; margin-bottom:6px; color:var(--accent-ink)}
+.verdict p{margin:0; font-size:14.5px; color:var(--ink-2); line-height:1.55}
+
+.metric{padding:14px 0; border-bottom:1px solid var(--line)}
+.metric:last-child{border-bottom:none; padding-bottom:0}
+.metric:first-child{padding-top:0}
+.mhead{display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:3px}
+.mname{font-size:14px; font-weight:600}
+.mval{font-family:"IBM Plex Mono",monospace; font-size:19px; font-weight:600; letter-spacing:-.015em; flex:none}
+.mval small{font-size:11px; font-weight:400; color:var(--muted); margin-left:2px}
+.mval.good{color:var(--good)} .mval.warn{color:var(--warn)} .mval.crit{color:var(--crit)}
+.mnote{font-size:12.5px; color:var(--muted); margin:0; line-height:1.45}
+.track{height:6px; border-radius:4px; background:var(--surface-2); position:relative; margin:8px 0 7px; border:1px solid var(--line); overflow:hidden}
+.band{position:absolute; top:0; bottom:0; background:var(--accent-soft)}
+.pin{position:absolute; top:-3px; bottom:-3px; width:3px; border-radius:2px; background:var(--ink)}
+.pin.base{background:var(--muted); opacity:.6; width:2px}
+
+.tag{font-family:"IBM Plex Mono",monospace; font-size:9.5px; letter-spacing:.07em; text-transform:uppercase; padding:2px 6px; border-radius:4px; background:var(--surface-2); color:var(--muted); border:1px solid var(--line); vertical-align:2px; margin-left:5px; font-weight:500}
+
+.transcript{font-size:14.5px; line-height:1.7; color:var(--ink-2); white-space:pre-wrap}
+.transcript mark{background:var(--signal-soft); color:var(--signal); padding:0 2px; border-radius:3px; font-weight:500}
+
+details{border-top:1px solid var(--line); padding-top:13px; margin-top:2px}
+details summary{cursor:pointer; font-size:13.5px; font-weight:600; color:var(--accent); list-style:none}
+details summary::-webkit-details-marker{display:none}
+details summary::before{content:"+ "; font-family:"IBM Plex Mono",monospace}
+details[open] summary::before{content:"– "}
+details .body{padding-top:12px}
+
+/* ---- history ---- */
+.spark{width:100%; height:52px; display:block}
+.hrow{display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--line); font-size:13.5px}
+.hrow:last-child{border-bottom:none}
+.hrow .d{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--muted); flex:none; width:52px}
+.hrow .n{flex:1; font-weight:500}
+.hrow .v{font-family:"IBM Plex Mono",monospace; font-size:13px; flex:none; color:var(--muted)}
+.empty{text-align:center; padding:28px 14px; color:var(--muted); font-size:14px; line-height:1.6}
+
+/* ---- method ---- */
+.method h3{font-size:15px; margin:20px 0 5px}
+.method h3:first-child{margin-top:0}
+.method p{font-size:14px; color:var(--ink-2); margin:0 0 9px; line-height:1.6}
+.method .ref{font-size:12.5px; color:var(--muted); font-style:italic}
+
+/* ---- nav ---- */
+nav{
+  position:fixed; left:0; right:0; bottom:0; z-index:50;
+  background:color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter:blur(12px); border-top:1px solid var(--line);
+  padding:7px 0 max(7px, env(safe-area-inset-bottom));
+}
+.navin{max-width:470px; margin:0 auto; display:grid; grid-template-columns:repeat(3,1fr); gap:4px; padding:0 18px}
+nav button{padding:9px 4px; border-radius:9px; font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); font-family:"IBM Plex Mono",monospace}
+nav button[aria-current="true"]{background:var(--accent-soft); color:var(--accent-ink)}
+
+.notice{
+  padding:14px 15px; border-radius:11px; font-size:13.5px; line-height:1.55;
+  background:var(--signal-soft); color:var(--signal); border:1px solid color-mix(in srgb, var(--signal) 28%, transparent);
+}
+.notice b{display:block; font-size:14.5px; margin-bottom:5px; font-family:Archivo,sans-serif}
+.notice ol{margin:9px 0 0; padding-left:19px}
+.notice li{margin-bottom:5px}
+.notice .fix{margin-top:11px; padding-top:11px; border-top:1px solid color-mix(in srgb, var(--signal) 22%, transparent)}
+.diag{font-family:"IBM Plex Mono",monospace; font-size:11px; line-height:1.7; color:var(--muted); background:var(--surface-2); border:1px solid var(--line); border-radius:9px; padding:11px 12px; margin-top:12px; overflow-x:auto; white-space:pre}
+.hidden{display:none !important}
+.toast{
+  position:fixed; left:50%; transform:translateX(-50%); bottom:96px; z-index:80;
+  background:var(--ink); color:var(--ground); padding:11px 17px; border-radius:9px;
+  font-size:13.5px; box-shadow:var(--shadow); max-width:calc(100% - 36px); text-align:center;
+}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="mast">
+    <div>
+      <h1>Ten Minutes Out Loud</h1>
+      <p id="mast-sub">Daily articulation training</p>
+    </div>
+    <div class="streak"><b class="mono" id="streak-n">0</b><span>day streak</span></div>
+  </header>
+
+  <!-- ================= TODAY ================= -->
+  <section id="v-today" class="stack">
+    <div id="mic-warn" class="notice hidden"></div>
+
+    <article class="card pad drill">
+      <span class="eyebrow" id="d-eyebrow">Today</span>
+      <h2 id="d-name">—</h2>
+      <p class="sub" id="d-sub">—</p>
+      <div class="prompt"><span class="who" id="d-who">Prompt</span><span id="d-prompt">—</span></div>
+      <ul class="rules" id="d-rules"></ul>
+      <button class="btn" id="go">Start</button>
+      <button class="swap" id="reroll">Different prompt</button>
+      <button class="swap" id="mictest">Check microphone</button>
+      <button class="swap" id="srtest">Check transcription</button>
+    </article>
+
+    <article class="card pad">
+      <span class="eyebrow">The rotation</span>
+      <div id="rotation" class="stack" style="gap:9px; margin-top:11px"></div>
+    </article>
+  </section>
+
+  <!-- ================= RESULT ================= -->
+  <section id="v-result" class="stack hidden"></section>
+
+  <!-- ================= HISTORY ================= -->
+  <section id="v-history" class="stack hidden"></section>
+
+  <!-- ================= METHOD ================= -->
+  <section id="v-method" class="stack hidden">
+    <article class="card pad method">
+      <span class="eyebrow">What this measures</span>
+
+      <h3 style="margin-top:14px">Why not accent</h3>
+      <p>Accentedness and comprehensibility are separable, and they correlate weakly: a strongly accented speaker can be perfectly easy to understand (Munro &amp; Derwing 1995, 1999; Levis 2005). Listener judgements of a speaker's competence track pause placement, filler density, pace, and pitch movement far more than phoneme identity. Those respond well to short daily training. Nativeness, after decades of L2 use, mostly does not.</p>
+      <p class="ref">Lev-Ari &amp; Keysar (2010) did find accented speech rated as less credible, apparently via processing fluency. The remedy that follows is slower, better-marked speech — which is what this app drills.</p>
+
+      <h3>Articulation rate vs. speech rate</h3>
+      <p>Speech rate counts every second including silence. Articulation rate counts only the time you were actually producing words. The gap between them is your pause budget. Two speakers at the same speech rate can be completely different to listen to: one talks fast and pauses well, the other talks steadily and never breathes.</p>
+
+      <h3>Filler counting, honestly</h3>
+      <p>Chrome's speech recognizer silently discards "um" and "uh" — it is built to clean up transcripts, not to score them. So those are caught in the audio instead: a voiced stretch over ~260&nbsp;ms that is flat in pitch and flat in energy is almost always a filled pause. Words like "like", "basically", and "you know" come from the transcript, where they survive.</p>
+      <p class="ref">The acoustic half is a heuristic. It will occasionally flag a held vowel in ordinary speech, and it will miss a very short "uh". Treat the trend across sessions as the signal, not any single count.</p>
+
+      <h3>Silence is the replacement</h3>
+      <p>The point of the filler drill is not to say fewer words. It's to move the hesitation from voiced to silent. Watch the swap ratio: pauses per filler. If fillers fall and pause count rises, that's the habit changing. If both fall, you're just speaking less.</p>
+
+      <h3>Your baseline, not a norm</h3>
+      <p>The first five sessions calibrate. After that every metric is scored against your own median rather than a published threshold, because published thresholds for spontaneous speech vary enormously by task, register, and language background. Reference bands are drawn faintly for orientation only.</p>
+
+      <h3>What it can't see</h3>
+      <p>It cannot judge whether your argument was any good, whether the evidence supported the claim, or whether you answered the actual question. That's the part to export and hand to a person — or to Claude — for a read. The app handles the mechanics; the mechanics are just the part that's measurable.</p>
+    </article>
+
+    <article class="card pad">
+      <span class="eyebrow">Data</span>
+      <p style="font-size:14px; color:var(--ink-2); margin:11px 0 13px; line-height:1.6">Sessions are stored in this browser only. Nothing is uploaded, and no audio is ever saved — only the numbers and the transcript. Clearing your browser data will erase your history, so export a backup every few weeks.</p>
+      <div class="row2">
+        <button class="btn ghost sm" id="export-all">Export backup</button>
+        <button class="btn ghost sm" id="import-all">Restore backup</button>
+      </div>
+      <button class="swap" id="wipe" style="margin-top:12px; color:var(--crit)">Erase all sessions</button>
+    </article>
+  </section>
+</div>
+
+<!-- ================= LIVE ================= -->
+<div id="live" class="live hidden">
+  <div class="live-inner">
+    <div class="rec"><span class="dot"></span><span id="rec-label">Recording</span></div>
+    <div class="subsys" id="subsys"></div>
+    <div class="clock mono" id="clock">0:00</div>
+    <p class="clock-note" id="clock-note">—</p>
+    <canvas class="meter" id="meter" width="880" height="88"></canvas>
+    <div class="livegrid">
+      <div><b id="l-wpm">—</b><span>wpm</span></div>
+      <div><b id="l-fill">0</b><span>fillers</span></div>
+      <div><b id="l-pause">0</b><span>pauses</span></div>
+    </div>
+    <div class="pacebar"><div class="paceband" id="paceband"></div><div class="pacepin" id="pacepin" style="left:0"></div></div>
+    <div class="pacelabel"><span>slower</span><span>target band</span><span>faster</span></div>
+    <div class="livetext" id="livetext"><span class="ph">Your words appear here as you speak.</span></div>
+    <div class="live-actions">
+      <button class="btn stop" id="stop">Finish</button>
+      <button class="btn ghost sm" id="abort">Discard</button>
+    </div>
+  </div>
+</div>
+
+<nav>
+  <div class="navin">
+    <button data-view="today" aria-current="true">Today</button>
+    <button data-view="history">History</button>
+    <button data-view="method">Method</button>
+  </div>
+</nav>
+
+<script>
+"use strict";
+/* ============================================================
+   ENGINE  (unit-tested in node; see test-engine.js)
+   ============================================================ */
+function percentile(s,p){if(!s.length)return NaN;if(s.length===1)return s[0];const i=(s.length-1)*p,lo=Math.floor(i),hi=Math.ceil(i);return lo===hi?s[lo]:s[lo]+(s[hi]-s[lo])*(i-lo);}
+function mean(a){return a.length?a.reduce((s,x)=>s+x,0)/a.length:NaN;}
+function sd(a){if(a.length<2)return 0;const m=mean(a);return Math.sqrt(a.reduce((s,x)=>s+(x-m)*(x-m),0)/(a.length-1));}
+function median(a){return percentile([...a].sort((x,y)=>x-y),0.5);}
+
+function detectPitch(buf,sampleRate,opts){
+  const o=Object.assign({minHz:65,maxHz:400,clarityMin:.86,rmsMin:.006},opts||{});
+  const n=buf.length;
+  let rms=0; for(let i=0;i<n;i++)rms+=buf[i]*buf[i]; rms=Math.sqrt(rms/n);
+  if(rms<o.rmsMin)return{hz:0,clarity:0,rms};
+  let dc=0; for(let i=0;i<n;i++)dc+=buf[i]; dc/=n;
+  const maxLag=Math.min(n-1,Math.floor(sampleRate/o.minHz));
+  const minLag=Math.max(2,Math.floor(sampleRate/o.maxHz));
+  if(minLag>=maxLag)return{hz:0,clarity:0,rms};
+  let bestLag=-1,bestVal=-1,prev=-1,rising=false;
+  for(let lag=minLag;lag<=maxLag;lag++){
+    let acf=0,m=0;
+    for(let i=0;i+lag<n;i++){const a=buf[i]-dc,b=buf[i+lag]-dc;acf+=a*b;m+=a*a+b*b;}
+    const nsdf=m>0?(2*acf)/m:0;
+    if(!rising&&nsdf>prev)rising=true;
+    if(rising&&nsdf<prev&&prev>o.clarityMin){bestLag=lag-1;bestVal=prev;break;}
+    if(nsdf>bestVal){bestVal=nsdf;bestLag=lag;}
+    prev=nsdf;
+  }
+  if(bestLag<0||bestVal<o.clarityMin)return{hz:0,clarity:bestVal<0?0:bestVal,rms};
+  const hz=sampleRate/bestLag;
+  if(hz<o.minHz||hz>o.maxHz)return{hz:0,clarity:bestVal,rms};
+  return{hz,clarity:bestVal,rms};
+}
+function hzToSemitones(hi,lo){if(!(hi>0)||!(lo>0))return 0;return 12*Math.log2(hi/lo);}
+
+function segment(frames,frameMs,opts){
+  const o=Object.assign({minPauseMs:280,absFloor:.004,noiseMult:1.8,speechFrac:.10},opts||{});
+  if(!frames.length)return{voiced:[],pauses:[],floor:0};
+  const s=frames.map(f=>f.rms).sort((a,b)=>a-b);
+  const floor=Math.max(o.absFloor,percentile(s,.05)*o.noiseMult,percentile(s,.95)*o.speechFrac);
+  const v=frames.map(f=>f.rms>=floor);
+  for(let i=1;i<v.length-1;i++)if(!v[i]&&v[i-1]&&v[i+1])v[i]=true;
+  const runs=[];let st=0;
+  for(let i=1;i<=v.length;i++){
+    if(i===v.length||v[i]!==v[st]){runs.push({voiced:v[st],from:st,to:i-1,ms:(i-st)*frameMs});st=i;}
+  }
+  return{voiced:runs.filter(r=>r.voiced),pauses:runs.filter(r=>!r.voiced&&r.ms>=o.minPauseMs),floor};
+}
+
+function detectFilledPauses(frames,voicedRuns,frameMs,opts){
+  const o=Object.assign({minMs:260,maxMs:1600,maxSemitoneSpread:1.1,maxRmsCv:.34,minClarityFrac:.55},opts||{});
+  const hits=[];
+  for(const run of voicedRuns){
+    if(run.ms<o.minMs||run.ms>o.maxMs)continue;
+    const slice=frames.slice(run.from,run.to+1);
+    const pitched=slice.filter(f=>f.hz>0);
+    if(pitched.length/slice.length<o.minClarityFrac)continue;
+    const hzs=pitched.map(f=>f.hz).sort((a,b)=>a-b);
+    if(hzToSemitones(percentile(hzs,.9),percentile(hzs,.1))>o.maxSemitoneSpread)continue;
+    const rmss=slice.map(f=>f.rms),m=mean(rmss);
+    if((m>0?sd(rmss)/m:1)>o.maxRmsCv)continue;
+    hits.push({tMs:run.from*frameMs,ms:run.ms});
+  }
+  return hits;
+}
+
+const FILLER_PHRASES=['you know','i mean','sort of','kind of','you know what i mean','like i said','or something','and stuff'];
+const FILLER_WORDS=['um','uh','erm','uhh','ah','er','like','basically','actually','literally','obviously','right'];
+const HEDGE_PHRASES=['i think','i feel like','i would say','maybe','perhaps','probably','a little bit','a bit','somewhat','i am not sure',"i'm not sure",'it seems','i could be wrong','more or less','pretty much','i guess'];
+const HEDGE_WORDS=['just','really','very','quite','possibly','hopefully'];
+const WEAK_OPENERS=['so','well','okay','ok','yeah','um','uh','basically','anyway','right'];
+const WEAK_OPENER_PHRASES=['i think','i mean','i guess','i would say','i just wanted to','what i wanted to say','let me just','i was going to say'];
+
+function tokenize(t){return(t.toLowerCase().match(/[a-z']+/g)||[]);}
+function countPhrases(text,phrases){
+  const t=' '+text.toLowerCase().replace(/[^a-z' ]+/g,' ').replace(/\s+/g,' ')+' ';
+  let n=0;
+  for(const p of phrases){let i=0;const needle=' '+p+' ';while((i=t.indexOf(needle,i))!==-1){n++;i+=needle.length-1;}}
+  return n;
+}
+function countWords(tokens,words){const set=new Set(words);let n=0;for(const tk of tokens)if(set.has(tk))n++;return n;}
+function countWeakOpeners(sents){
+  let n=0;
+  for(const s of sents){
+    const c=s.toLowerCase().replace(/[^a-z' ]+/g,' ').replace(/\s+/g,' ').trim();
+    if(!c)continue;
+    if(WEAK_OPENERS.includes(c.split(' ')[0])){n++;continue;}
+    if(WEAK_OPENER_PHRASES.some(p=>c.startsWith(p+' ')||c===p))n++;
+  }
+  return n;
+}
+function mattr(tokens,window){
+  const w=window||50;
+  if(tokens.length<w)return tokens.length?new Set(tokens).size/tokens.length:0;
+  let total=0,n=0;
+  for(let i=0;i+w<=tokens.length;i++){total+=new Set(tokens.slice(i,i+w)).size/w;n++;}
+  return total/n;
+}
+function sentences(chunks){
+  const out=[];
+  for(const c of chunks){
+    const parts=c.split(/[.!?]+\s*/).map(s=>s.trim()).filter(Boolean);
+    if(parts.length)out.push(...parts); else if(c.trim())out.push(c.trim());
+  }
+  return out;
+}
+const PREAMBLE=new Set(['so','well','ok','okay','um','uh','yeah','right','now','basically','like','i','think','guess','mean','just','wanted','want','to','say','talk','about','the','a','and','but','you','know','my','this','that','is','it']);
+function openingLatency(events){
+  for(const e of events)if(!PREAMBLE.has(e.word))return e.tMs;
+  return events.length?events[events.length-1].tMs:0;
+}
+
+function analyze(input){
+  const{frames,frameMs,chunks,wordEvents,durationMs}=input;
+  const seg=segment(frames,frameMs);
+  const voicedMs=seg.voiced.reduce((s,r)=>s+r.ms,0);
+  const filled=detectFilledPauses(frames,seg.voiced,frameMs);
+  const filledMs=filled.reduce((s,f)=>s+f.ms,0);
+  const speakingMs=Math.max(1,voicedMs-filledMs);
+  const text=chunks.join(' ');
+  const tokens=tokenize(text);
+  const words=tokens.length;
+  const lexFillers=countPhrases(text,FILLER_PHRASES)+countWords(tokens,FILLER_WORDS);
+  const totalFillers=lexFillers+filled.length;
+  const hedges=countPhrases(text,HEDGE_PHRASES)+countWords(tokens,HEDGE_WORDS);
+  const pitched=frames.filter(f=>f.hz>0).map(f=>f.hz).sort((a,b)=>a-b);
+  const pitchRangeSt=pitched.length>20?hzToSemitones(percentile(pitched,.9),percentile(pitched,.1)):NaN;
+  const voicedRms=[];
+  for(const r of seg.voiced)for(let i=r.from;i<=r.to;i++)voicedRms.push(frames[i].rms);
+  const rmsMean=mean(voicedRms);
+  const rmsCv=rmsMean>0?sd(voicedRms)/rmsMean:NaN;
+  let headE=0,tailE=0,nUtt=0;
+  for(const r of seg.voiced){
+    const len=r.to-r.from+1; if(len<10)continue;
+    const k=Math.max(2,Math.round(len*.2));
+    let h=0,t=0;
+    for(let i=0;i<k;i++){h+=frames[r.from+i].rms;t+=frames[r.to-i].rms;}
+    headE+=h/k;tailE+=t/k;nUtt++;
+  }
+  const trailOff=nUtt?tailE/headE:NaN;
+  const sents=sentences(chunks);
+  const sentLens=sents.map(s=>tokenize(s).length).filter(n=>n>0);
+  const weakOpeners=countWeakOpeners(sents);
+  const fillerTimes=filled.map(f=>f.tMs).sort((a,b)=>a-b);
+  let longestRunMs=0,prevT=0;
+  for(const t of fillerTimes.concat([durationMs])){longestRunMs=Math.max(longestRunMs,t-prevT);prevT=t;}
+  return{
+    durationMs,words,
+    speechRate:words/(durationMs/60000),
+    articulationRate:words/(speakingMs/60000),
+    fillerPer100:words?(totalFillers/words)*100:0,
+    fillersLexical:lexFillers,fillersAcoustic:filled.length,fillersTotal:totalFillers,
+    hedgePer100:words?(hedges/words)*100:0,
+    pauseCount:seg.pauses.length,
+    pauseMeanMs:seg.pauses.length?mean(seg.pauses.map(p=>p.ms)):0,
+    pauseRatio:1-voicedMs/Math.max(1,durationMs),
+    pitchRangeSt,pitchMedianHz:pitched.length?median(pitched):NaN,
+    volumeCv:rmsCv,trailOff,
+    sentenceMean:sentLens.length?mean(sentLens):NaN,
+    sentenceSd:sentLens.length?sd(sentLens):NaN,
+    unitCount:sents.length,weakOpeners,
+    weakOpenerRate:sents.length?weakOpeners/sents.length:0,
+    lexicalDiversity:mattr(tokens,50),
+    openingLatencyMs:openingLatency(wordEvents||[]),
+    longestCleanRunMs:longestRunMs,
+    swapRatio:totalFillers>0?seg.pauses.length/totalFillers:(seg.pauses.length?Infinity:0)
+  };
+}
+
+/* ============================================================
+   CURRICULUM
+   ============================================================ */
+const DRILLS=[
+  {
+    id:'point', name:'Point First', trains:'Structure',
+    sub:'60 seconds. The claim in the first sentence, then the reasoning.',
+    seconds:60,
+    rules:[
+      'Open with the conclusion. No runway, no "so", no "I think".',
+      'Then AND (the setting) — BUT (the tension) — THEREFORE (what follows).',
+      'Stop when you have made the point. Early is fine.'
+    ],
+    focus:['openingLatencyMs','weakOpenerRate','sentenceMean'],
+    prompts:[
+      {who:'A board member asks',text:'Outplant survivorship dropped at one of our sites this year. What happened and what are you doing about it?'},
+      {who:'A major donor asks',text:'Why does genotype diversity cost more, and what does it buy me?'},
+      {who:'Your team asks',text:'Why are we changing the monitoring cadence? Give the decision first.'},
+      {who:'A new hire asks',text:'What does the restoration program actually do that a dive shop with coral fragments could not?'},
+      {who:'A reviewer asks',text:'Summarize the single most important finding in your last monitoring report.'},
+      {who:'Your director asks',text:'If you could only keep one nursery site, which one and why?'}
+    ]
+  },
+  {
+    id:'silence', name:'Silence Over Filler', trains:'Fluency',
+    sub:'90 seconds. Every "um" becomes a closed mouth.',
+    seconds:90,
+    rules:[
+      'When you feel a filler coming, stop your mouth. Say nothing.',
+      'A two-second silence sounds deliberate. It never sounds lost.',
+      'Pauses going up while fillers go down is the win condition.'
+    ],
+    focus:['fillerPer100','swapRatio','pauseCount'],
+    prompts:[
+      {who:'Talk for 90 seconds',text:'Explain what a coral nursery is to someone who has never been in the water.'},
+      {who:'Talk for 90 seconds',text:'Walk through what happens on a normal outplanting day, start to finish.'},
+      {who:'Talk for 90 seconds',text:'Describe the hardest operational problem your program faced this year.'},
+      {who:'Talk for 90 seconds',text:'Explain why you cannot simply grow more coral and be done with it.'},
+      {who:'Talk for 90 seconds',text:'Describe how you decide where to outplant.'},
+      {who:'Talk for 90 seconds',text:'Explain what changed in the program after the last bleaching event.'}
+    ]
+  },
+  {
+    id:'pace', name:'Pace Control', trains:'Delivery',
+    sub:'90 seconds at a deliberate clip, with the clause breaks marked.',
+    seconds:90,
+    rules:[
+      'Aim for the band on the meter. Under it feels slow to you and clear to everyone else.',
+      'Put a real beat at every comma you would have written.',
+      'Land the last three words of a sentence at full volume.'
+    ],
+    focus:['articulationRate','pauseMeanMs','trailOff'],
+    prompts:[
+      {who:'Speak at a measured pace',text:'Give the three-sentence version of what your program accomplished last quarter.'},
+      {who:'Speak at a measured pace',text:'Explain a technical result to a room that has no science background.'},
+      {who:'Speak at a measured pace',text:'Deliver the opening ninety seconds of a conference talk on your work.'},
+      {who:'Speak at a measured pace',text:'Read out the reasoning behind a budget request as if to your CFO.'},
+      {who:'Speak at a measured pace',text:'Describe a permit or compliance constraint and why it shapes your fieldwork.'},
+      {who:'Speak at a measured pace',text:'Give a status update on a project that is behind schedule.'}
+    ]
+  },
+  {
+    id:'range', name:'Range', trains:'Prosody',
+    sub:'60 seconds. Move the pitch where the meaning moves.',
+    seconds:60,
+    rules:[
+      'Pick the one word per sentence that carries the meaning. Lift it.',
+      'Drop the pitch at the end of a statement. Flat endings read as uncertainty.',
+      'Wider is the goal here, even if it feels theatrical from inside your head.'
+    ],
+    focus:['pitchRangeSt','trailOff','volumeCv'],
+    prompts:[
+      {who:'With deliberate emphasis',text:'Make the case for why this work matters, to a room that is already sympathetic.'},
+      {who:'With deliberate emphasis',text:'Describe something you saw underwater that you have never been able to explain well.'},
+      {who:'With deliberate emphasis',text:'Deliver a thank-you to a funder who just closed a significant gift.'},
+      {who:'With deliberate emphasis',text:'Tell the story of one coral genotype from collection to outplanting.'},
+      {who:'With deliberate emphasis',text:'Give the closing sixty seconds of a talk. Land it.'},
+      {who:'With deliberate emphasis',text:'Introduce a member of your team and what they do, as if to a full room.'}
+    ]
+  },
+  {
+    id:'pressure', name:'Under Pressure', trains:'Composure',
+    sub:'45 seconds. A hard question, answered without hedging.',
+    seconds:45,
+    rules:[
+      'Take five seconds of silence before you start. Deliberately.',
+      'No "I think", no "maybe", no "sort of". Say the thing or say you do not know.',
+      'One claim, one piece of support, one consequence. Then stop.'
+    ],
+    focus:['hedgePer100','openingLatencyMs','fillerPer100'],
+    prompts:[
+      {who:'A skeptical funder',text:'I have read that coral restoration does not scale, and that this money would do more good spent on water quality. Convince me otherwise.'},
+      {who:'A reporter',text:'Is outplanting not just gardening? What happens the next time there is a bleaching event?'},
+      {who:'Your executive director',text:'Why should I give you two more headcount instead of giving them to Development?'},
+      {who:'A peer reviewer',text:'Your survivorship numbers look selectively reported. Walk me through how the sites were chosen.'},
+      {who:'A board member',text:'What is the single biggest thing that could go wrong in your program next year?'},
+      {who:'A partner agency',text:'Why should we permit this at a site where the last restoration attempt failed?'}
+    ]
+  }
+];
+
+/* ============================================================
+   STATE
+   ============================================================ */
+const KEY='tmol.sessions.v1';
+let sessions=[];
+try{sessions=JSON.parse(localStorage.getItem(KEY)||'[]');}catch(e){sessions=[];}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(sessions));}catch(e){toast('Could not save — browser storage is full or blocked.');}}
+
+const $=id=>document.getElementById(id);
+function toast(msg,ms){
+  const t=document.createElement('div');
+  t.className='toast'; t.textContent=msg; document.body.appendChild(t);
+  setTimeout(()=>t.remove(),ms||3200);
+}
+const fmtDate=ts=>new Date(ts).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+const dayKey=ts=>new Date(ts).toISOString().slice(0,10);
+
+function streak(){
+  if(!sessions.length)return 0;
+  const days=new Set(sessions.map(s=>dayKey(s.ts)));
+  let n=0;const d=new Date();
+  if(!days.has(dayKey(d.getTime())))d.setDate(d.getDate()-1);
+  while(days.has(dayKey(d.getTime()))){n++;d.setDate(d.getDate()-1);}
+  return n;
+}
+function todaysDrill(){
+  const done=sessions.length;
+  return DRILLS[done%DRILLS.length];
+}
+let currentDrill=todaysDrill();
+let currentPrompt=currentDrill.prompts[Math.floor(Math.random()*currentDrill.prompts.length)];
+
+/* baseline = median of the first five sessions for a given metric */
+const CAL=5;
+function baseline(metric){
+  const vals=sessions.slice(0,CAL).map(s=>s.m[metric]).filter(v=>typeof v==='number'&&isFinite(v));
+  return vals.length>=3?median(vals):null;
+}
+function recent(metric,n){
+  const vals=sessions.slice(-(n||5)).map(s=>s.m[metric]).filter(v=>typeof v==='number'&&isFinite(v));
+  return vals.length?median(vals):null;
+}
+
+/* ============================================================
+   METRIC DEFINITIONS  (band = orientation only, honestly labelled)
+   ============================================================ */
+const METRICS=[
+  {k:'articulationRate',needsWords:true,name:'Articulation rate',unit:'wpm',dp:0,band:[135,175],lo:90,hi:240,dir:'band',
+   tag:'Likely', note:'Words per minute of actual speaking, pauses excluded.'},
+  {k:'fillerPer100',needsWords:true,name:'Filler density',unit:'per 100 w',dp:1,band:[0,3],lo:0,hi:14,dir:'lower',
+   tag:'Likely', note:'Transcript fillers plus filled pauses caught in the audio.'},
+  {k:'weakOpenerRate',needsWords:true,name:'Weak openers',unit:'of units',dp:0,pct:true,band:[0,.2],lo:0,hi:1,dir:'lower',
+   tag:'Guessing', note:'Spoken units that begin with a stall instead of the point.'},
+  {k:'openingLatencyMs',needsWords:true,name:'Time to the point',unit:'s',dp:1,sec:true,band:[0,5000],lo:0,hi:20000,dir:'lower',
+   tag:'Guessing', note:'How long before the first substantive word arrives.'},
+  {k:'hedgePer100',needsWords:true,name:'Hedge density',unit:'per 100 w',dp:1,band:[0,4],lo:0,hi:16,dir:'lower',
+   tag:'Guessing', note:'"I think", "maybe", "just", "sort of" and relatives.'},
+  {k:'pitchRangeSt',name:'Pitch range',unit:'semitones',dp:1,band:[6,14],lo:0,hi:20,dir:'higher',
+   tag:'Likely', note:'Spread between your 10th and 90th percentile pitch.'},
+  {k:'pauseCount',name:'Pauses',unit:'',dp:0,band:null,lo:0,hi:40,dir:'neutral',
+   tag:'Certain', note:'Silences over 280 ms. More is usually better, if fillers fell.'},
+  {k:'swapRatio',needsWords:true,name:'Swap ratio',unit:'pause / filler',dp:2,band:[1.5,99],lo:0,hi:6,dir:'higher',
+   tag:'Guessing', note:'The habit trade you are trying to make. Above 1.5 is good.'},
+  {k:'trailOff',name:'Ending strength',unit:'',dp:2,band:[.7,1.3],lo:0,hi:1.6,dir:'band',
+   tag:'Guessing', note:'Energy at the end of a sentence vs the start. Below 0.7 means you fade.'},
+  {k:'sentenceMean',needsWords:true,name:'Mean unit length',unit:'words',dp:1,band:[9,20],lo:0,hi:45,dir:'band',
+   tag:'Guessing', note:'Long units are where listeners lose the thread.'},
+  {k:'lexicalDiversity',needsWords:true,name:'Lexical diversity',unit:'MATTR',dp:2,band:[.6,1],lo:.3,hi:1,dir:'higher',
+   tag:'Certain', note:'Vocabulary variety, corrected for length.'}
+];
+const MIN_WORDS=15;
+const MBY=Object.fromEntries(METRICS.map(m=>[m.k,m]));
+
+function fmtMetric(m,v){
+  if(typeof v!=='number'||!isFinite(v))return '—';
+  if(m.sec)return (v/1000).toFixed(m.dp);
+  if(m.pct)return Math.round(v*100)+'%';
+  return v.toFixed(m.dp);
+}
+function scoreOf(m,v){
+  if(typeof v!=='number'||!isFinite(v)||!m.band)return '';
+  const[a,b]=m.band;
+  if(m.dir==='lower')return v<=b?'good':(v<=b*1.8?'warn':'crit');
+  if(m.dir==='higher')return v>=a?'good':(v>=a*.65?'warn':'crit');
+  if(m.dir==='band')return (v>=a&&v<=b)?'good':((v>=a*.8&&v<=b*1.2)?'warn':'crit');
+  return '';
+}
+
+/* ============================================================
+   COACHING RULES
+   ============================================================ */
+function diagnose(m,drill){
+  const out=[];
+  const base=k=>baseline(k);
+  const push=(pri,title,body)=>out.push({pri,title,body});
+
+  if(m.words<MIN_WORDS){
+    const gotAudio=isFinite(m.pitchRangeSt)||m.pauseCount>0;
+    push(0,'The words were not captured',
+      gotAudio
+        ? 'The microphone recorded fine — the pitch and pause numbers below came off real audio. Speech recognition returned nothing, so anything that needs a transcript is withheld rather than scored as zero. This is a fault in the app, not in how you spoke.'
+        : 'Under fifteen words came through and there is little audio either. The session may have ended early, or the microphone never opened.');
+    return out;
+  }
+
+  if(m.fillerPer100>5) push(1,'Fillers are running the sentence',
+    `${m.fillerPer100.toFixed(1)} per hundred words, ${m.fillersAcoustic} of them filled pauses in the audio. The fix is not fewer words, it is silence in the same slot. Tomorrow, run Silence Over Filler and let every stall be soundless.`);
+  else if(m.fillerPer100>3) push(3,'Fillers are present but not loud',
+    `${m.fillerPer100.toFixed(1)} per hundred words. Close to the point where a listener stops noticing. Hold it here.`);
+
+  if(m.swapRatio<1&&m.fillersTotal>2) push(1,'You are filling instead of pausing',
+    `${m.pauseCount} silent pauses against ${m.fillersTotal} fillers. The hesitation is happening either way — right now it is coming out voiced. Moving it to silence is the entire trade.`);
+
+  if(m.openingLatencyMs>7000) push(1,'The point arrives late',
+    `${(m.openingLatencyMs/1000).toFixed(1)} seconds of runway before the first substantive word. In a board room that is the window where attention is decided. Try opening with the conclusion and letting the setup follow.`);
+  else if(m.weakOpenerRate>.35) push(2,'Most units open with a stall',
+    `${Math.round(m.weakOpenerRate*100)}% of what you said began with "so", "well", "I think" or similar. Each one is a free half-second that tells the listener nothing. Delete the first three words and start again.`);
+
+  if(isFinite(m.pitchRangeSt)&&m.pitchRangeSt<4) push(1,'Pitch is close to flat',
+    `${m.pitchRangeSt.toFixed(1)} semitones between your low and high. Flat delivery reads as either bored or uncertain regardless of what the words say. Range is trainable in a way accent is not, so this is worth the minutes.`);
+  else if(isFinite(m.pitchRangeSt)&&m.pitchRangeSt<6) push(3,'Pitch range is narrow',
+    `${m.pitchRangeSt.toFixed(1)} semitones. There is room to open this up, particularly on the word that carries the sentence.`);
+
+  if(m.articulationRate>190) push(2,'You are outrunning the room',
+    `${Math.round(m.articulationRate)} wpm of actual speaking. Fast speech is where a second-language accent costs the most, because the listener has no slack for processing. Slowing to about 150 buys back more clarity than any pronunciation work would.`);
+  else if(m.articulationRate<115&&m.words>40) push(3,'Pace is on the slow side',
+    `${Math.round(m.articulationRate)} wpm. Deliberate is good; this is far enough down that it may read as effortful.`);
+
+  if(m.hedgePer100>6) push(2,'Hedging is undercutting the claim',
+    `${m.hedgePer100.toFixed(1)} qualifiers per hundred words. "I think" before a fact you actually know invites the room to discount it. Say it flat, or say you are not sure — the middle setting costs you both ways.`);
+
+  if(isFinite(m.trailOff)&&m.trailOff<.65) push(2,'Your sentences fade at the end',
+    `Ending energy is ${Math.round(m.trailOff*100)}% of opening energy. The last three words are usually the ones that carry the point, and they are the ones going quiet.`);
+
+  if(isFinite(m.sentenceMean)&&m.sentenceMean>24) push(3,'Units are running long',
+    `${m.sentenceMean.toFixed(0)} words on average. Somewhere past twenty the listener starts holding too much open at once.`);
+
+  // improvement, measured against the calibration baseline
+  const wins=[];
+  for(const k of ['fillerPer100','hedgePer100','openingLatencyMs','weakOpenerRate']){
+    const b=base(k); const v=m[k];
+    if(b!==null&&isFinite(v)&&b>0&&v<b*.75) wins.push(MBY[k].name.toLowerCase());
+  }
+  for(const k of ['pitchRangeSt','articulationRate']){
+    const b=base(k); const v=m[k];
+    if(b!==null&&isFinite(v)&&k==='pitchRangeSt'&&v>b*1.2) wins.push('pitch range');
+  }
+  if(wins.length) push(4,'Better than your baseline',
+    `Improved against your first-five median on ${wins.join(', ')}. That is the number that matters — not the absolute value.`);
+
+  if(!out.length) push(4,'Nothing is misfiring',
+    'Every measure sits in a reasonable place for this drill. When the mechanics are clean, the useful feedback is about content, and that is what the export is for.');
+
+  out.sort((a,b)=>a.pri-b.pri);
+  return out.slice(0,3);
+}
+
+function nextDrill(diags){
+  const map={
+    'Fillers are running the sentence':'silence',
+    'You are filling instead of pausing':'silence',
+    'The point arrives late':'point',
+    'Most units open with a stall':'point',
+    'Pitch is close to flat':'range',
+    'Pitch range is narrow':'range',
+    'You are outrunning the room':'pace',
+    'Pace is on the slow side':'pace',
+    'Your sentences fade at the end':'range',
+    'Hedging is undercutting the claim':'pressure',
+    'Units are running long':'point'
+  };
+  for(const d of diags){ if(map[d.title]) return DRILLS.find(x=>x.id===map[d.title]); }
+  return null;
+}
+
+/* ============================================================
+   VIEWS
+   ============================================================ */
+function renderToday(){
+  $('streak-n').textContent=streak();
+  const d=currentDrill;
+  $('d-eyebrow').textContent = sessions.length<CAL ? 'Calibrating · session '+(sessions.length+1)+' of '+CAL : 'Today · trains '+d.trains.toLowerCase();
+  $('d-name').textContent=d.name;
+  $('d-sub').textContent=d.sub;
+  $('d-who').textContent=currentPrompt.who;
+  $('d-prompt').textContent=currentPrompt.text;
+  $('d-rules').innerHTML=d.rules.map(r=>'<li>'+esc(r)+'</li>').join('');
+  $('mast-sub').textContent = sessions.length ? sessions.length+' session'+(sessions.length===1?'':'s')+' logged' : 'Daily articulation training';
+
+  $('rotation').innerHTML=DRILLS.map(x=>{
+    const on=x.id===d.id;
+    return `<div style="display:flex; align-items:center; gap:11px; opacity:${on?1:.6}">
+      <span class="trains" style="min-width:82px; text-align:center">${esc(x.trains)}</span>
+      <div style="flex:1; min-width:0">
+        <div style="font-size:14px; font-weight:${on?600:500}">${esc(x.name)}${on?' <span style="color:var(--accent); font-size:11px; font-family:\'IBM Plex Mono\',monospace">← today</span>':''}</div>
+        <div style="font-size:12px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${esc(x.sub)}</div>
+      </div>
+      <span class="mono" style="font-size:12px; color:var(--muted); flex:none">${x.seconds}s</span>
+    </div>`;
+  }).join('');
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+function renderHistory(){
+  const v=$('v-history');
+  if(!sessions.length){
+    v.innerHTML='<article class="card pad"><div class="empty">No sessions yet.<br>The first five calibrate your baseline.</div></article>';
+    return;
+  }
+  const trendKeys=['fillerPer100','articulationRate','pitchRangeSt','openingLatencyMs'];
+  const trends=trendKeys.map(k=>{
+    const m=MBY[k];
+    const vals=sessions.map(s=>s.m[k]).filter(x=>typeof x==='number'&&isFinite(x));
+    if(vals.length<2)return '';
+    const b=baseline(k), last=vals[vals.length-1];
+    let delta='';
+    if(b!==null&&b>0){
+      const pc=Math.round(((last-b)/b)*100);
+      const better=(m.dir==='lower')?pc<0:(m.dir==='higher'?pc>0:Math.abs(pc)<15);
+      delta=`<span style="font-family:'IBM Plex Mono',monospace; font-size:12px; color:${better?'var(--good)':'var(--muted)'}">${pc>0?'+':''}${pc}% vs baseline</span>`;
+    }
+    return `<div style="margin-bottom:20px">
+      <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px">
+        <span style="font-size:13.5px; font-weight:600">${esc(m.name)}</span>${delta}
+      </div>
+      ${sparkline(vals,m)}
+    </div>`;
+  }).join('');
+
+  v.innerHTML=`
+    <article class="card pad">
+      <span class="eyebrow">Trends</span>
+      <div style="margin-top:14px">${trends||'<p class="empty">Two sessions needed for a trend.</p>'}</div>
+    </article>
+    <article class="card pad">
+      <span class="eyebrow">Log</span>
+      <div style="margin-top:10px">
+        ${[...sessions].reverse().slice(0,40).map(s=>`<div class="hrow">
+          <span class="d">${fmtDate(s.ts)}</span>
+          <span class="n">${esc(s.drillName)}</span>
+          <span class="v">${s.m.fillerPer100.toFixed(1)} f/100 · ${Math.round(s.m.articulationRate)} wpm</span>
+        </div>`).join('')}
+      </div>
+    </article>`;
+}
+
+function sparkline(vals,m){
+  const W=420,H=52,pad=4;
+  const lo=Math.min(...vals),hi=Math.max(...vals);
+  const span=(hi-lo)||1;
+  const x=i=>pad+(i/(vals.length-1))*(W-pad*2);
+  const y=v=>H-pad-((v-lo)/span)*(H-pad*2);
+  const pts=vals.map((v,i)=>[x(i),y(v)]);
+  const line=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  const area=line+` L ${x(vals.length-1).toFixed(1)} ${H-pad} L ${pad} ${H-pad} Z`;
+  const last=pts[pts.length-1];
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${esc(m.name)} across ${vals.length} sessions">
+    <line x1="${pad}" y1="${H/2}" x2="${W-pad}" y2="${H/2}" stroke="var(--grid)" stroke-width="1"/>
+    <path d="${area}" fill="var(--accent-soft)" opacity=".7"/>
+    <path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+    <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="3.2" fill="var(--accent)"/>
+  </svg>`;
+}
+
+function renderResult(session){
+  const m=session.m, diags=session.diags, nd=nextDrill(diags);
+  const thin=m.words<MIN_WORDS;
+  const rows=METRICS.map(def=>{
+    const v=m[def.k];
+    if(typeof v!=='number'||!isFinite(v))return '';
+    if(thin&&def.needsWords){
+      return '<div class="metric"><div class="mhead">'+
+        '<span class="mname">'+esc(def.name)+'</span>'+
+        '<span class="mval" style="color:var(--muted); font-size:14px">withheld</span></div>'+
+        '<p class="mnote">Needs a transcript. Nothing was captured this session, so this would read as a perfect score rather than no score.</p></div>';
+    }
+    const cls=scoreOf(def,v);
+    const b=baseline(def.k);
+    const clamp=x=>Math.max(0,Math.min(1,(x-def.lo)/(def.hi-def.lo)));
+    let bandHtml='';
+    if(def.band){
+      const a=clamp(def.band[0])*100, z=clamp(def.band[1])*100;
+      bandHtml=`<div class="band" style="left:${a.toFixed(1)}%; width:${Math.max(1,z-a).toFixed(1)}%"></div>`;
+    }
+    const baseHtml=(b!==null)?`<div class="pin base" style="left:${(clamp(b)*100).toFixed(1)}%" title="your baseline"></div>`:'';
+    return `<div class="metric">
+      <div class="mhead">
+        <span class="mname">${esc(def.name)}<span class="tag">${def.tag}</span></span>
+        <span class="mval ${cls}">${fmtMetric(def,v)}<small>${esc(def.unit)}</small></span>
+      </div>
+      <div class="track">${bandHtml}${baseHtml}<div class="pin" style="left:${(clamp(v)*100).toFixed(1)}%"></div></div>
+      <p class="mnote">${esc(def.note)}${b!==null?' <span style="opacity:.75">Your baseline: '+fmtMetric(def,b)+'.</span>':''}</p>
+    </div>`;
+  }).join('');
+
+  const marked=markTranscript(session.transcript);
+
+  $('v-result').innerHTML=`
+    <article class="card pad">
+      <span class="eyebrow">${esc(session.drillName)} · ${Math.round(m.durationMs/1000)}s · ${m.words} words</span>
+      ${session.wordsOk===false?`<div class="notice" style="margin-top:12px"><b>Only half this session was recorded</b>The microphone worked — pitch, pauses and ending strength below are real. Speech recognition captured nothing${session.srError?' ('+esc(session.srError)+')':''}, so every word-based measure is withheld.</div>`:''}
+      <div class="stack" style="margin-top:13px">
+        ${diags.map(d=>`<div class="verdict"><h3>${esc(d.title)}</h3><p>${esc(d.body)}</p></div>`).join('')}
+      </div>
+      ${nd?`<p style="font-size:13.5px; color:var(--muted); margin:14px 0 0; line-height:1.55"><b style="color:var(--ink)">Tomorrow:</b> ${esc(nd.name)} — ${esc(nd.sub)}</p>`:''}
+    </article>
+
+    <article class="card pad">
+      <span class="eyebrow">Measurements</span>
+      <div style="margin-top:14px">${rows}</div>
+      ${sessions.length<CAL?`<p class="mnote" style="margin-top:16px; padding-top:13px; border-top:1px solid var(--line)">Still calibrating — ${CAL-sessions.length} more session${CAL-sessions.length===1?'':'s'} before scoring switches to your own baseline. The faint bands are literature orientation, not targets.</p>`:''}
+    </article>
+
+    <article class="card pad">
+      <span class="eyebrow">Transcript</span>
+      <p class="mnote" style="margin:9px 0 12px">Highlighted words are fillers and hedges found in the text. Filled pauses (um, uh) are counted from the audio and do not appear here — the recognizer strips them.</p>
+      <div class="transcript">${marked||'<span style="color:var(--muted)">Nothing was transcribed.</span>'}</div>
+      <details style="margin-top:16px">
+        <summary>Send this to Claude for a read on the content</summary>
+        <div class="body">
+          <p class="mnote" style="margin-bottom:12px">The app measures how you said it. It has no view on whether the argument held, whether you answered the question, or whether the evidence carried the claim. Export the packet and paste it into a conversation for that.</p>
+          <div class="row2">
+            <button class="btn ghost sm" id="copy-packet">Copy packet</button>
+            <button class="btn ghost sm" id="dl-packet">Download</button>
+          </div>
+        </div>
+      </details>
+    </article>
+
+    <button class="btn ghost" id="back-today">Done</button>`;
+
+  $('back-today').onclick=()=>{currentDrill=todaysDrill();currentPrompt=pick(currentDrill);renderToday();show('today');};
+  $('copy-packet').onclick=()=>{
+    navigator.clipboard.writeText(packet(session)).then(()=>toast('Packet copied.'),()=>toast('Clipboard blocked — use Download instead.'));
+  };
+  $('dl-packet').onclick=async()=>{
+    const dl=await claudeUse('downloads');
+    const name='articulation-'+dayKey(session.ts)+'.md';
+    if(!dl){ fallbackDownload(name,packet(session)); return; }
+    try{ await dl.save({filename:name,data:packet(session)}); }
+    catch(e){ if(e&&e.code==='declined')return; fallbackDownload(name,packet(session)); }
+  };
+}
+
+function markTranscript(text){
+  if(!text)return '';
+  const words=[...FILLER_WORDS,...HEDGE_WORDS];
+  const phrases=[...FILLER_PHRASES,...HEDGE_PHRASES].filter(p=>p.includes(' '));
+  let out=esc(text);
+  for(const p of phrases.sort((a,b)=>b.length-a.length)){
+    out=out.replace(new RegExp('\\b'+p.replace(/'/g,"&#39;")+'\\b','gi'),mm=>'<mark>'+mm+'</mark>');
+  }
+  out=out.replace(new RegExp('\\b('+words.join('|')+')\\b','gi'),mm=>'<mark>'+mm+'</mark>');
+  return out.replace(/<mark>([^<]*)<mark>/g,'<mark>$1').replace(/<\/mark>([^<]*)<\/mark>/g,'$1</mark>');
+}
+
+function packet(s){
+  const m=s.m;
+  const L=[];
+  L.push('# Articulation session — '+new Date(s.ts).toLocaleString());
+  L.push('');
+  L.push('**Drill:** '+s.drillName+' ('+s.drillTrains+')');
+  L.push('**Prompt:** '+s.prompt.who+' — '+s.prompt.text);
+  L.push('**Length:** '+Math.round(m.durationMs/1000)+'s, '+m.words+' words');
+  L.push('');
+  L.push('## Delivery measurements');
+  L.push('');
+  L.push('| Measure | Value | My baseline |');
+  L.push('|---|---|---|');
+  const thin=m.words<MIN_WORDS;
+  for(const d of METRICS){
+    const v=m[d.k]; if(typeof v!=='number'||!isFinite(v))continue;
+    if(thin&&d.needsWords){ L.push('| '+d.name+' | withheld, no transcript | — |'); continue; }
+    const b=baseline(d.k);
+    L.push('| '+d.name+' | '+fmtMetric(d,v)+' '+d.unit+' | '+(b!==null?fmtMetric(d,b)+' '+d.unit:'not yet set')+' |');
+  }
+  if(s.wordsOk===false){
+    L.push('');
+    L.push('> Speech recognition captured nothing this session'+(s.srError?' (error: '+s.srError+')':'')+
+           '. Audio measurements are real; word-based measures are withheld.');
+  }
+  L.push('');
+  L.push('## What the app flagged');
+  L.push('');
+  for(const d of s.diags)L.push('- **'+d.title+'** — '+d.body);
+  L.push('');
+  L.push('## Transcript');
+  L.push('');
+  L.push(s.transcript||'(nothing transcribed)');
+  L.push('');
+  L.push('---');
+  L.push('');
+  L.push('I am training articulation and structure, ten minutes a day. The numbers above cover delivery mechanics only. What I need from you is the part the app cannot see: was the answer actually organized, did it answer the question that was asked, did the claim get the support it needed, and where would a skeptical listener push back? Be direct about what was weak before telling me what worked.');
+  return L.join('\n');
+}
+function fallbackDownload(name,text){
+  const blob=new Blob([text],{type:'text/markdown'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  toast('If nothing downloaded, use Copy packet instead.');
+}
+
+/* capability access, tolerant of absence */
+let capCache={};
+async function claudeUse(name){
+  if(name in capCache)return capCache[name];
+  try{
+    const c=(window.claude&&typeof window.claude.use==='function')?await window.claude.use(name):null;
+    capCache[name]=c; return c;
+  }catch(e){ capCache[name]=null; return null; }
+}
+
+/* ============================================================
+   RECORDING
+   ============================================================ */
+const FRAME_MS=20;
+let rec={active:false};
+
+function pick(d){return d.prompts[Math.floor(Math.random()*d.prompts.length)];}
+
+/* On Android the microphone is effectively exclusive: whichever subsystem
+   claims it first can starve the other. Speech recognition is the fussier
+   claimant and drives the metrics that matter most, so it goes first and
+   audio capture layers on top. Either can fail without killing the session,
+   but the session must SAY which one died rather than record into a void. */
+async function start(){
+  const drill=currentDrill;
+
+  rec={active:true,drill,prompt:currentPrompt,
+       frames:[],chunks:[],interim:'',wordEvents:[],seen:0,
+       t0:performance.now(),raf:0,lastFrame:-1,sr:null,
+       heard:false,srState:'starting',srError:null,deafWarned:false,
+       ctx:null,stream:null,an:null,buf:null};
+
+  $('rec-label').textContent='Recording · '+drill.name;
+  $('clock-note').textContent=drill.seconds+' second target · finish whenever you are done';
+  $('livetext').innerHTML='<span class="ph">Your words appear here as you speak.</span>';
+  $('l-wpm').textContent='—'; $('l-fill').textContent='0'; $('l-pause').textContent='0';
+  const bandLo=(135-90)/(240-90)*100, bandHi=(175-90)/(240-90)*100;
+  $('paceband').style.left=bandLo+'%'; $('paceband').style.width=(bandHi-bandLo)+'%';
+  $('subsys').innerHTML='';
+  $('live').classList.remove('hidden');
+  document.body.style.overflow='hidden';
+
+  await startRecognition();
+
+  let stream=null;
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:false}});
+  }catch(e){
+    // recognition may hold the microphone exclusively; that is survivable
+    if(rec.srState!=='listening'){
+      rec.active=false;
+      $('live').classList.add('hidden');
+      document.body.style.overflow='';
+      await micWarn(e);
+      window.scrollTo(0,0);
+      return;
+    }
+  }
+
+  if(stream){
+    try{
+      const AC=window.AudioContext||window.webkitAudioContext;
+      const ctx=new AC();
+      if(ctx.state==='suspended')await ctx.resume();
+      const src=ctx.createMediaStreamSource(stream);
+      const an=ctx.createAnalyser();
+      an.fftSize=2048; an.smoothingTimeConstant=0;
+      src.connect(an);
+      rec.ctx=ctx; rec.stream=stream; rec.an=an; rec.buf=new Float32Array(an.fftSize);
+    }catch(e){ rec.stream=stream; rec.an=null; }
+  }
+
+  paintSubsys();
+  loop();
+}
+
+function paintSubsys(){
+  const audioOn=!!rec.an;
+  const srOn=rec.srState==='listening';
+  const label={starting:'connecting',listening:'listening',error:'failed',unsupported:'unavailable',ended:'stopped'}[rec.srState]||rec.srState;
+  $('subsys').innerHTML=
+    '<span class="chip '+(audioOn?'on':'off')+'">audio '+(audioOn?'on':'off')+'</span>'+
+    '<span class="chip '+(srOn?'on':'off')+'">words '+label+'</span>'+
+    (rec.srError?'<span class="chip off">'+esc(rec.srError)+'</span>':'');
+}
+
+const SR_ERRORS={
+  'no-speech':'No speech was detected. Move the phone closer and speak up.',
+  'audio-capture':'The recogniser could not get the microphone — something else is holding it.',
+  'not-allowed':'Speech recognition was refused by the browser.',
+  'service-not-allowed':'The speech service refused this page.',
+  'network':'The recogniser needs a network connection and could not reach the service.',
+  'aborted':'Recognition was interrupted.',
+  'language-not-supported':'This language is not available for recognition here.'
+};
+
+function startRecognition(){
+  return new Promise(resolve=>{
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!SR){
+      rec.srState='unsupported';
+      rec.srError='not supported';
+      $('livetext').innerHTML='<span class="ph">This browser cannot transcribe speech, so fillers, hedging and structure will not be scored. Pitch and pauses still are.</span>';
+      paintSubsys(); resolve(false); return;
+    }
+    const r=new SR();
+    r.continuous=true; r.interimResults=true; r.lang='en-US'; r.maxAlternatives=1;
+    let settled=false;
+    const settle=v=>{ if(!settled){ settled=true; paintSubsys(); resolve(v); } };
+
+    r.onstart=()=>{ rec.srState='listening'; rec.srError=null; settle(true); };
+    r.onaudiostart=()=>{ rec.srState='listening'; paintSubsys(); };
+
+    r.onresult=e=>{
+      if(!rec.active)return;
+      rec.heard=true;
+      let interim='';
+      for(let i=e.resultIndex;i<e.results.length;i++){
+        const res=e.results[i];
+        const txt=res[0].transcript.trim();
+        if(res.isFinal){ if(txt)rec.chunks.push(txt); }
+        else interim+=txt+' ';
+      }
+      rec.interim=interim;
+      stampWords();
+      paintTranscript();
+    };
+
+    r.onerror=e=>{
+      // 'no-speech' is routine mid-session; the restart loop handles it
+      if(e.error==='no-speech'&&rec.heard){ return; }
+      rec.srError=e.error;
+      if(e.error!=='no-speech'&&e.error!=='aborted'){
+        rec.srState='error';
+        rec.sr=null;
+        showDeaf(SR_ERRORS[e.error]||('Recognition failed: '+e.error));
+      }
+      paintSubsys();
+      settle(false);
+    };
+
+    r.onend=()=>{
+      if(rec.active&&rec.sr){
+        try{ r.start(); }
+        catch(err){ rec.srState='ended'; paintSubsys(); }
+      }else if(rec.active&&rec.srState==='listening'){
+        rec.srState='ended'; paintSubsys();
+      }
+    };
+
+    try{ r.start(); rec.sr=r; }
+    catch(e){
+      rec.srState='error'; rec.srError='start failed'; rec.sr=null;
+      showDeaf('The recogniser would not start. Reload the page and try again.');
+      settle(false);
+    }
+    // never hang the session waiting on a recogniser that will not answer
+    setTimeout(()=>{ if(!settled){ rec.srState='error'; rec.srError='timed out'; settle(false); } },4000);
+  });
+}
+
+function showDeaf(msg){
+  if(rec.deafWarned)return;
+  rec.deafWarned=true;
+  const el=$('livetext');
+  el.innerHTML='<div class="deaf"><b>Words are not being captured.</b><br>'+esc(msg)+
+    '<br><br>The audio measurements — pitch, pauses, ending strength — are still recording. You can carry on, or tap Discard and try again.</div>';
+}
+
+function stampWords(){
+  const all=tokenize(rec.chunks.join(' ')+' '+rec.interim);
+  const t=performance.now()-rec.t0;
+  for(let i=rec.seen;i<all.length;i++)rec.wordEvents.push({tMs:t,word:all[i]});
+  rec.seen=all.length;
+}
+function paintTranscript(){
+  const el=$('livetext');
+  const done=esc(rec.chunks.join(' '));
+  const int=esc(rec.interim);
+  el.innerHTML=(done||int)?(done+(int?' <span class="interim">'+int+'</span>':'')):'<span class="ph">Your words appear here as you speak.</span>';
+  el.scrollTop=el.scrollHeight;
+}
+
+function loop(){
+  if(!rec.active)return;
+  rec.raf=requestAnimationFrame(loop);
+  const now=performance.now();
+  const el=now-rec.t0;
+  const idx=Math.floor(el/FRAME_MS);
+  if(idx<=rec.lastFrame)return;
+  rec.lastFrame=idx;
+
+  if(rec.an){
+    rec.an.getFloatTimeDomainData(rec.buf);
+    const p=detectPitch(rec.buf,rec.ctx.sampleRate);
+    rec.frames.push({t:el,rms:p.rms,hz:p.hz,clarity:p.clarity});
+    if(idx%5===0)drawMeter();
+  }
+  if(idx%25===0)updateLive(el);
+
+  // caught speaking into a void: real voiced audio, still no words
+  if(!rec.heard&&!rec.deafWarned&&el>10000&&rec.frames.length){
+    const voiced=rec.frames.filter(f=>f.hz>0).length;
+    if(voiced>120) showDeaf('Ten seconds of speech went by with nothing transcribed.'+
+      (rec.srError?' The recogniser reported: '+rec.srError+'.':' The recogniser is running but returning nothing.'));
+  }
+
+  const s=Math.floor(el/1000);
+  const c=$('clock');
+  c.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+  c.classList.toggle('over',s>rec.drill.seconds);
+  if(s>=rec.drill.seconds+45)stop();
+}
+
+function drawMeter(){
+  const cv=$('meter'), g=cv.getContext('2d');
+  const W=cv.width,H=cv.height;
+  const cs=getComputedStyle(document.body);
+  g.clearRect(0,0,W,H);
+  const n=Math.floor(W/4);
+  const fs=rec.frames.slice(-n);
+  const peak=Math.max(0.02,...fs.map(f=>f.rms));
+  g.fillStyle=cs.getPropertyValue('--accent').trim()||'#0E6B67';
+  for(let i=0;i<fs.length;i++){
+    const h=Math.max(2,(fs[i].rms/peak)*(H-8));
+    const x=W-(fs.length-i)*4;
+    g.globalAlpha=fs[i].hz>0?1:.32;
+    g.fillRect(x,(H-h)/2,2.4,h);
+  }
+  g.globalAlpha=1;
+}
+
+function updateLive(el){
+  const words=tokenize(rec.chunks.join(' ')+' '+rec.interim).length;
+  if(!rec.frames.length){
+    $('l-wpm').textContent=words?Math.round(words/(el/60000)):'—';
+    $('l-fill').textContent='—'; $('l-pause').textContent='—';
+    return;
+  }
+  const seg=segment(rec.frames,FRAME_MS);
+  const voicedMs=seg.voiced.reduce((s,r)=>s+r.ms,0);
+  const filled=detectFilledPauses(rec.frames,seg.voiced,FRAME_MS);
+  const lex=countPhrases(rec.chunks.join(' '),FILLER_PHRASES)+countWords(tokenize(rec.chunks.join(' ')),FILLER_WORDS);
+  const rate=voicedMs>1500?words/((voicedMs-filled.reduce((s,f)=>s+f.ms,0))/60000):NaN;
+
+  $('l-wpm').textContent=isFinite(rate)&&rate>0?Math.round(rate):'—';
+  $('l-fill').textContent=lex+filled.length;
+  $('l-pause').textContent=seg.pauses.length;
+  if(isFinite(rate)&&rate>0){
+    const pos=Math.max(0,Math.min(1,(rate-90)/(240-90)))*100;
+    $('pacepin').style.left=pos.toFixed(1)+'%';
+  }
+}
+
+function teardown(){
+  rec.active=false;
+  cancelAnimationFrame(rec.raf);
+  if(rec.sr){ const r=rec.sr; rec.sr=null; try{r.stop();}catch(e){} }
+  if(rec.stream)rec.stream.getTracks().forEach(t=>t.stop());
+  if(rec.ctx&&rec.ctx.state!=='closed')rec.ctx.close().catch(()=>{});
+  rec.an=null; rec.ctx=null; rec.stream=null;
+  $('live').classList.add('hidden');
+  document.body.style.overflow='';
+}
+
+function stop(){
+  if(!rec.active)return;
+  const durationMs=performance.now()-rec.t0;
+  if(rec.interim.trim())rec.chunks.push(rec.interim.trim());
+  const snapshot={frames:rec.frames,chunks:rec.chunks.slice(),wordEvents:rec.wordEvents,drill:rec.drill,prompt:rec.prompt,
+                  audioOk:rec.frames.length>0,wordsOk:rec.heard,srError:rec.srError,srState:rec.srState};
+  teardown();
+
+  const m=analyze({frames:snapshot.frames,frameMs:FRAME_MS,chunks:snapshot.chunks,wordEvents:snapshot.wordEvents,durationMs});
+  const session={
+    ts:Date.now(), drillId:snapshot.drill.id, drillName:snapshot.drill.name, drillTrains:snapshot.drill.trains,
+    prompt:snapshot.prompt, transcript:snapshot.chunks.join(' '), m, diags:[],
+    audioOk:snapshot.audioOk, wordsOk:snapshot.wordsOk, srError:snapshot.srError
+  };
+  session.diags=diagnose(m,snapshot.drill);
+  sessions.push(session); save();
+  renderResult(session); renderToday(); show('result');
+  window.scrollTo(0,0);
+}
+
+function abort(){ teardown(); show('today'); }
+
+/* ---- microphone diagnosis ----------------------------------------------
+   Reports WHY capture failed rather than guessing. The distinction that
+   matters: a frame that was never delegated microphone access refuses
+   before the browser ever prompts, so there is no permission for the user
+   to find and change. That is unfixable from inside the page.            */
+async function micDiagnose(err){
+  const d={
+    framed: window.self!==window.top,
+    secure: window.isSecureContext,
+    hasApi: !!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia),
+    origin: location.origin&&location.origin!=='null'?location.origin:(location.protocol+'//'),
+    proto: location.protocol,
+    permission:'unknown',
+    policy:'unknown',
+    err: err?(err.name||String(err)):null,
+    ua: /Android/i.test(navigator.userAgent)?'Android':(/iPhone|iPad/i.test(navigator.userAgent)?'iOS':'desktop'),
+    inAppBrowser: /(FBAN|FBAV|Instagram|Line|wv\)|; wv)/i.test(navigator.userAgent)
+  };
+  try{
+    if(navigator.permissions&&navigator.permissions.query){
+      const st=await navigator.permissions.query({name:'microphone'});
+      d.permission=st.state;
+    }
+  }catch(e){ d.permission='unqueryable'; }
+  try{
+    if(typeof document.featurePolicy!=='undefined'&&document.featurePolicy.allowsFeature)
+      d.policy=document.featurePolicy.allowsFeature('microphone')?'allowed':'blocked';
+    else if(navigator.permissions) d.policy='unreportable';
+  }catch(e){ d.policy='unreportable'; }
+  return d;
+}
+
+function micVerdict(d){
+  // Precedence matters. Diagnose in order of how fundamental the blocker is:
+  // a frame that was never delegated the microphone, then a missing or busy
+  // device, then an origin that cannot hold a permission at all, and only
+  // then an ordinary stored denial the user can actually change.
+  const local = d.proto==='content:'||d.proto==='file:'||d.origin==='null'||d.proto==='null:';
+  const permErr = d.err==='NotAllowedError'||d.err==='SecurityError'||!d.err;
+
+  // 1. the frame was never handed microphone rights — no prompt ever happened
+  if(d.framed && (d.policy==='blocked' || (d.err==='NotAllowedError' && d.permission==='denied'))){
+    return {cause:'frame',
+      title:'This page is not allowed to reach the microphone',
+      body:'The page is running inside a frame that was never granted microphone access, so the browser refused before it could ask you. There is no permission setting to change — the request never happened.',
+      steps:[
+        'The app has to be served from its own web address rather than embedded. Ask Claude to walk you through publishing it.',
+        'Until then, record the drill on your phone\'s voice recorder and send Claude the audio. Pace, pauses, filled pauses and pitch can all be measured from the file.'
+      ]};
+  }
+
+  // 2. device-level failures, which mean the same thing on any origin
+  if(d.err==='NotFoundError'||d.err==='DevicesNotFoundError'){
+    return {cause:'nodevice',title:'No microphone was found',
+      body:'The browser could not see a recording device.',
+      steps:['If a headset or earbuds are connected, disconnect them and try again.']};
+  }
+  if(d.err==='NotReadableError'||d.err==='TrackStartError'){
+    return {cause:'busy',title:'The microphone is in use by something else',
+      body:'Another app or tab already has the microphone open.',
+      steps:['Close other calls, recorders, or browser tabs, then try again.']};
+  }
+
+  // 3. an origin the browser will not store a permission against
+  if(local && permErr){
+    return {cause:'opaqueorigin',
+      title:'A downloaded file cannot hold a microphone permission',
+      body:'Android opened this as "'+(d.proto||'file:')+'//" rather than a web address. Chrome grants the microphone only to a real origin and will not remember a permission for a local file, so there is no setting to change.',
+      steps:[
+        'The app has to be served from a web address. Ask Claude to walk you through publishing it — about fifteen minutes once, and then it works from your home screen like any app.',
+        'Until then, record the drill on your phone\'s voice recorder and send Claude the audio. Pace, pauses, filled pauses and pitch can all be measured from the file.'
+      ]};
+  }
+
+  // 4. ordinary permission states the user can genuinely change
+  if(d.err==='NotAllowedError'&&d.permission==='prompt'){
+    return {cause:'dismissed',title:'The permission request was dismissed',
+      body:'The browser asked and the prompt was closed without an answer.',
+      steps:['Tap Check microphone again and choose Allow when the prompt appears.']};
+  }
+  if(d.err==='NotAllowedError'){
+    return {cause:'denied',title:'Microphone permission is set to blocked',
+      body:'This site has a stored "block" for the microphone.',
+      steps:[
+        d.ua==='Android'
+          ? 'In Chrome, tap the icon just left of the web address, then Permissions, then Microphone, and switch it to Allow. Reload the page.'
+          : 'Open your browser settings for this site, switch the microphone to Allow, then reload.',
+        'Check your phone\'s own settings too: Settings, then Apps, then your browser, then Permissions, then Microphone.'
+      ]};
+  }
+
+  // 5. context problems
+  if(!d.secure){
+    return {cause:'insecure',title:'This page is not on a secure connection',
+      body:'Browsers only hand the microphone to pages served over https.',
+      steps:['Open the page over https.']};
+  }
+  if(!d.hasApi){
+    return {cause:'noapi',title:'This browser will not give the page a microphone',
+      body:'The capture API is missing here, which usually means an in-app browser.',
+      steps:['Open the page in Chrome directly rather than inside another app.']};
+  }
+  return {cause:'unknown',title:'The microphone could not be opened',
+    body:'The browser refused for a reason it did not name.',
+    steps:['Send Claude the technical detail below and it can work out the cause.']};
+}
+
+function renderMicVerdict(v,d){
+  const el=$('mic-warn');
+  el.innerHTML='<b>'+esc(v.title)+'</b>'+esc(v.body)+
+    '<div class="fix"><ol>'+v.steps.map(s=>'<li>'+esc(s)+'</li>').join('')+'</ol></div>'+
+    '<div class="diag">'+esc(
+      'frame       '+(d.framed?'inside a frame':'top level')+'\n'+
+      'delegation  '+d.policy+'\n'+
+      'permission  '+d.permission+'\n'+
+      'secure      '+(d.secure?'yes':'no')+'\n'+
+      'error       '+(d.err||'none')+'\n'+
+      'platform    '+d.ua+(d.inAppBrowser?' (in-app browser)':'')+'\n'+
+      'origin      '+d.origin+(d.proto&&d.proto!=='https:'?'   (not a web address)':'')
+    )+'</div>';
+  el.classList.remove('hidden');
+}
+
+async function micWarn(err){
+  const d=await micDiagnose(err);
+  renderMicVerdict(micVerdict(d),d);
+  return d;
+}
+
+/* Six seconds of "say anything" beats discovering a deaf recogniser after a
+   full drill. Runs the recogniser alone, without competing for the mic. */
+async function srTest(){
+  const el=$('mic-warn');
+  el.className='notice'; el.style.background=''; el.style.color=''; el.style.borderColor='';
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){
+    el.innerHTML='<b>This browser cannot transcribe speech</b>Pitch, pauses and ending strength will still be measured, but fillers, hedging and structure will not.';
+    el.classList.remove('hidden'); return;
+  }
+  el.innerHTML='<b>Say something for six seconds</b>Anything at all — count to ten, read this sentence out loud.';
+  el.classList.remove('hidden');
+  el.scrollIntoView({block:'center',behavior:'smooth'});
+
+  const r=new SR();
+  r.continuous=true; r.interimResults=true; r.lang='en-US';
+  let got='',err=null,started=false;
+  r.onstart=()=>{started=true;};
+  r.onresult=e=>{
+    let t='';
+    for(let i=0;i<e.results.length;i++)t+=e.results[i][0].transcript+' ';
+    got=t.trim();
+    el.innerHTML='<b>Hearing you</b><span style="font-style:italic">'+esc(got)+'</span>';
+  };
+  r.onerror=e=>{ if(e.error!=='no-speech')err=e.error; };
+  try{ r.start(); }catch(e){ err='start failed'; }
+
+  await new Promise(res=>setTimeout(res,6000));
+  try{ r.stop(); }catch(e){}
+  await new Promise(res=>setTimeout(res,400));
+
+  if(got){
+    el.style.background='var(--accent-soft)'; el.style.color='var(--accent-ink)'; el.style.borderColor='var(--line)';
+    el.innerHTML='<b>Transcription works</b>Heard: <span style="font-style:italic">'+esc(got)+'</span>';
+  }else{
+    el.innerHTML='<b>Nothing was transcribed</b>'+
+      esc(err?(SR_ERRORS[err]||('The recogniser reported: '+err+'.')):(started?'The recogniser started but returned no words. It may not have been able to get the microphone.':'The recogniser never started.'))+
+      '<div class="fix"><ol>'+
+      '<li>Check you are not on a call and no other app is holding the microphone.</li>'+
+      '<li>Speech recognition needs a network connection here — check you are online.</li>'+
+      '<li>If it keeps failing, run sessions anyway: pitch, pauses and ending strength are still measured, and Claude can score the rest from a voice memo.</li>'+
+      '</ol></div>'+
+      '<div class="diag">'+esc('error       '+(err||'none')+'\nstarted     '+(started?'yes':'no'))+'</div>';
+  }
+}
+
+async function micTest(){
+  const el=$('mic-warn');
+  el.className='notice'; el.innerHTML='<b>Checking…</b>Asking the browser for the microphone.';
+  try{
+    const st=await navigator.mediaDevices.getUserMedia({audio:true});
+    st.getTracks().forEach(t=>t.stop());
+    const d=await micDiagnose(null);
+    el.style.background='var(--accent-soft)'; el.style.color='var(--accent-ink)';
+    el.style.borderColor='var(--line)';
+    el.innerHTML='<b>Microphone works</b>The browser granted access. You are ready to run a session.'+
+      '<div class="diag">'+esc('delegation  '+d.policy+'\npermission  '+d.permission+'\nplatform    '+d.ua)+'</div>';
+  }catch(e){
+    el.style.background=''; el.style.color=''; el.style.borderColor='';
+    await micWarn(e);
+  }
+}
+
+/* ============================================================
+   NAV + WIRING
+   ============================================================ */
+const VIEWS=['today','result','history','method'];
+function show(v){
+  for(const x of VIEWS)$('v-'+x).classList.add('hidden');
+  $('v-'+v).classList.remove('hidden');
+  document.querySelectorAll('nav button').forEach(b=>{
+    b.setAttribute('aria-current',String(b.dataset.view===v||(v==='result'&&b.dataset.view==='today')));
+  });
+  if(v==='history')renderHistory();
+}
+document.querySelectorAll('nav button').forEach(b=>{ b.onclick=()=>show(b.dataset.view); });
+
+$('go').onclick=start;
+$('stop').onclick=stop;
+$('abort').onclick=abort;
+$('mictest').onclick=micTest;
+$('srtest').onclick=srTest;
+$('reroll').onclick=()=>{
+  let p=currentPrompt, guard=0;
+  while(p===currentPrompt&&guard++<20)p=pick(currentDrill);
+  currentPrompt=p; renderToday();
+};
+
+$('export-all').onclick=async()=>{
+  const data=JSON.stringify({v:1,exported:new Date().toISOString(),sessions},null,1);
+  const name='articulation-backup-'+dayKey(Date.now())+'.json';
+  const dl=await claudeUse('downloads');
+  if(!dl){ fallbackDownload(name,data); return; }
+  try{ await dl.save({filename:name,data}); }
+  catch(e){ if(e&&e.code==='declined')return; fallbackDownload(name,data); }
+};
+$('import-all').onclick=()=>{
+  const inp=document.createElement('input');
+  inp.type='file'; inp.accept='.json,application/json';
+  inp.onchange=()=>{
+    const f=inp.files&&inp.files[0]; if(!f)return;
+    const r=new FileReader();
+    r.onload=()=>{
+      try{
+        const parsed=JSON.parse(String(r.result));
+        const incoming=Array.isArray(parsed)?parsed:parsed.sessions;
+        if(!Array.isArray(incoming))throw new Error('shape');
+        const byTs=new Map(sessions.map(s=>[s.ts,s]));
+        for(const s of incoming)if(s&&typeof s.ts==='number'&&s.m)byTs.set(s.ts,s);
+        sessions=[...byTs.values()].sort((a,b)=>a.ts-b.ts);
+        save(); renderToday(); renderHistory();
+        toast('Restored '+sessions.length+' sessions.');
+      }catch(e){ toast('That file is not a backup from this app.'); }
+    };
+    r.readAsText(f);
+  };
+  inp.click();
+};
+$('wipe').onclick=()=>{
+  if(!sessions.length){toast('Nothing to erase.');return;}
+  if(confirm('Erase all '+sessions.length+' sessions? Export a backup first if you want to keep them.')){
+    sessions=[]; save(); currentDrill=todaysDrill(); currentPrompt=pick(currentDrill);
+    renderToday(); renderHistory(); toast('History erased.');
+  }
+};
+
+if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+  micWarn(null);
+  $('go').disabled=true;
+}else{
+  // surface a frame-level block before he wastes a session discovering it
+  micDiagnose(null).then(d=>{
+    if(d.framed&&d.policy==='blocked')renderMicVerdict(micVerdict(Object.assign(d,{err:'NotAllowedError'})),d);
+  });
+}
+renderToday(); show('today');
+</script>
+
+</body>
+</html>
