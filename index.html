@@ -109,6 +109,10 @@ button{font:inherit; color:inherit; cursor:pointer; border:none; background:none
 .btn.sm{padding:11px; font-size:14px}
 .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
 
+.modebar{display:grid; grid-template-columns:1fr 1fr; gap:4px; padding:4px; background:var(--surface-2); border:1px solid var(--line); border-radius:11px; margin-bottom:9px}
+.modebar button{padding:10px 6px; border-radius:8px; font-size:13.5px; font-weight:600; color:var(--muted); transition:background .15s}
+.modebar button[aria-pressed="true"]{background:var(--surface); color:var(--accent-ink); box-shadow:var(--shadow)}
+.modenote{font-size:12.5px; color:var(--muted); line-height:1.5; margin:0 0 14px}
 .swap{
   margin-top:11px; text-align:center; font-size:13px; color:var(--muted);
   width:100%; text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--line);
@@ -250,6 +254,11 @@ nav button[aria-current="true"]{background:var(--accent-soft); color:var(--accen
       <p class="sub" id="d-sub">—</p>
       <div class="prompt"><span class="who" id="d-who">Prompt</span><span id="d-prompt">—</span></div>
       <ul class="rules" id="d-rules"></ul>
+      <div class="modebar" role="group" aria-label="What this session measures">
+        <button id="mode-words" data-mode="words">Words</button>
+        <button id="mode-voice" data-mode="voice">Voice</button>
+      </div>
+      <p class="modenote" id="modenote"></p>
       <button class="btn" id="go">Start</button>
       <button class="swap" id="reroll">Different prompt</button>
       <button class="swap" id="mictest">Check microphone</button>
@@ -612,6 +621,14 @@ const DRILLS=[
    STATE
    ============================================================ */
 const KEY='tmol.sessions.v1';
+const MODE_KEY='tmol.mode.v1';
+/* Android Chrome gives the microphone to one claimant. Speech recognition and
+   audio capture cannot both have it, so the session picks which half it
+   measures. Words is the default: fillers, hedging and structure are what the
+   training is actually for. */
+let mode='words';
+try{ const mm=localStorage.getItem(MODE_KEY); if(mm==='voice'||mm==='words')mode=mm; }catch(e){}
+function setMode(m){ mode=m; try{localStorage.setItem(MODE_KEY,m);}catch(e){} renderToday(); }
 let sessions=[];
 try{sessions=JSON.parse(localStorage.getItem(KEY)||'[]');}catch(e){sessions=[];}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(sessions));}catch(e){toast('Could not save — browser storage is full or blocked.');}}
@@ -655,8 +672,10 @@ function recent(metric,n){
    METRIC DEFINITIONS  (band = orientation only, honestly labelled)
    ============================================================ */
 const METRICS=[
-  {k:'articulationRate',needsWords:true,name:'Articulation rate',unit:'wpm',dp:0,band:[135,175],lo:90,hi:240,dir:'band',
+  {k:'articulationRate',needsWords:true,needsAudio:true,name:'Articulation rate',unit:'wpm',dp:0,band:[135,175],lo:90,hi:240,dir:'band',
    tag:'Likely', note:'Words per minute of actual speaking, pauses excluded.'},
+  {k:'speechRate',needsWords:true,name:'Speaking pace',unit:'wpm',dp:0,band:[110,150],lo:60,hi:220,dir:'band',
+   tag:'Likely', note:'Words per minute across the whole session, pauses included.'},
   {k:'fillerPer100',needsWords:true,name:'Filler density',unit:'per 100 w',dp:1,band:[0,3],lo:0,hi:14,dir:'lower',
    tag:'Likely', note:'Transcript fillers plus filled pauses caught in the audio.'},
   {k:'weakOpenerRate',needsWords:true,name:'Weak openers',unit:'of units',dp:0,pct:true,band:[0,.2],lo:0,hi:1,dir:'lower',
@@ -665,13 +684,13 @@ const METRICS=[
    tag:'Guessing', note:'How long before the first substantive word arrives.'},
   {k:'hedgePer100',needsWords:true,name:'Hedge density',unit:'per 100 w',dp:1,band:[0,4],lo:0,hi:16,dir:'lower',
    tag:'Guessing', note:'"I think", "maybe", "just", "sort of" and relatives.'},
-  {k:'pitchRangeSt',name:'Pitch range',unit:'semitones',dp:1,band:[6,14],lo:0,hi:20,dir:'higher',
+  {k:'pitchRangeSt',needsAudio:true,name:'Pitch range',unit:'semitones',dp:1,band:[6,14],lo:0,hi:20,dir:'higher',
    tag:'Likely', note:'Spread between your 10th and 90th percentile pitch.'},
-  {k:'pauseCount',name:'Pauses',unit:'',dp:0,band:null,lo:0,hi:40,dir:'neutral',
+  {k:'pauseCount',needsAudio:true,name:'Pauses',unit:'',dp:0,band:null,lo:0,hi:40,dir:'neutral',
    tag:'Certain', note:'Silences over 280 ms. More is usually better, if fillers fell.'},
-  {k:'swapRatio',needsWords:true,name:'Swap ratio',unit:'pause / filler',dp:2,band:[1.5,99],lo:0,hi:6,dir:'higher',
+  {k:'swapRatio',needsWords:true,needsAudio:true,name:'Swap ratio',unit:'pause / filler',dp:2,band:[1.5,99],lo:0,hi:6,dir:'higher',
    tag:'Guessing', note:'The habit trade you are trying to make. Above 1.5 is good.'},
-  {k:'trailOff',name:'Ending strength',unit:'',dp:2,band:[.7,1.3],lo:0,hi:1.6,dir:'band',
+  {k:'trailOff',needsAudio:true,name:'Ending strength',unit:'',dp:2,band:[.7,1.3],lo:0,hi:1.6,dir:'band',
    tag:'Guessing', note:'Energy at the end of a sentence vs the start. Below 0.7 means you fade.'},
   {k:'sentenceMean',needsWords:true,name:'Mean unit length',unit:'words',dp:1,band:[9,20],lo:0,hi:45,dir:'band',
    tag:'Guessing', note:'Long units are where listeners lose the thread.'},
@@ -679,6 +698,26 @@ const METRICS=[
    tag:'Certain', note:'Vocabulary variety, corrected for length.'}
 ];
 const MIN_WORDS=15;
+/* Which half of a session is absent, and why a given metric cannot be scored. */
+function missing(session){
+  const m=session.m;
+  return {
+    words: m.words<MIN_WORDS,
+    audio: !(m.pauseCount>0||isFinite(m.pitchRangeSt)),
+    mode: session.mode||'words'
+  };
+}
+function withheldWhy(def,gap){
+  if(def.needsWords&&def.needsAudio&&(gap.words||gap.audio))
+    return 'Needs both the transcript and the audio. This session only measured '+(gap.words?'the audio':'the words')+'.';
+  if(def.needsWords&&gap.words)
+    return gap.mode==='voice'
+      ? 'Needs a transcript. Voice mode does not transcribe — run this drill again in Words mode to score it.'
+      : 'Needs a transcript, and nothing was captured. Scoring it as zero would read as a perfect result.';
+  if(def.needsAudio&&gap.audio)
+    return 'Needs the audio. Words mode gives the microphone to the recogniser, so run this drill in Voice mode to score it.';
+  return null;
+}
 const MBY=Object.fromEntries(METRICS.map(m=>[m.k,m]));
 
 function fmtMetric(m,v){
@@ -706,10 +745,20 @@ function diagnose(m,drill){
 
   if(m.words<MIN_WORDS){
     const gotAudio=isFinite(m.pitchRangeSt)||m.pauseCount>0;
-    push(0,'The words were not captured',
-      gotAudio
-        ? 'The microphone recorded fine — the pitch and pause numbers below came off real audio. Speech recognition returned nothing, so anything that needs a transcript is withheld rather than scored as zero. This is a fault in the app, not in how you spoke.'
-        : 'Under fifteen words came through and there is little audio either. The session may have ended early, or the microphone never opened.');
+    if(drill&&drill._mode==='voice'&&gotAudio){
+      const bits=[];
+      if(isFinite(m.pitchRangeSt))bits.push('pitch range '+m.pitchRangeSt.toFixed(1)+' semitones');
+      if(m.pauseCount)bits.push(m.pauseCount+' pauses');
+      if(isFinite(m.trailOff))bits.push('ending strength '+m.trailOff.toFixed(2));
+      push(4,'Audio measured',
+        'This was a voice session, so there is no transcript by design. Measured: '+bits.join(', ')+
+        '. Save the recording and send it to Claude for the analysis the app cannot do on its own.');
+    }else{
+      push(0,'The words were not captured',
+        gotAudio
+          ? 'The microphone recorded fine — the pitch and pause numbers came off real audio. Speech recognition returned nothing, so anything needing a transcript is withheld rather than scored as zero. This is a fault in the app, not in how you spoke.'
+          : 'Under fifteen words came through and there is little audio either. The session may have ended early, or the microphone never opened.');
+    }
     return out;
   }
 
@@ -797,6 +846,12 @@ function renderToday(){
   $('d-rules').innerHTML=d.rules.map(r=>'<li>'+esc(r)+'</li>').join('');
   $('mast-sub').textContent = sessions.length ? sessions.length+' session'+(sessions.length===1?'':'s')+' logged' : 'Daily articulation training';
 
+  $('mode-words').setAttribute('aria-pressed',String(mode==='words'));
+  $('mode-voice').setAttribute('aria-pressed',String(mode==='voice'));
+  $('modenote').textContent = mode==='words'
+    ? 'Measures fillers, hedging, weak openers, sentence length and pace from what you say. Your phone will not let the app listen to the audio at the same time, so pitch and pauses sit this one out.'
+    : 'Measures pitch range, pauses and ending strength from the audio, and saves the recording so you can send it to Claude. No transcript, so fillers and structure sit this one out.';
+
   $('rotation').innerHTML=DRILLS.map(x=>{
     const on=x.id===d.id;
     return `<div style="display:flex; align-items:center; gap:11px; opacity:${on?1:.6}">
@@ -874,16 +929,17 @@ function sparkline(vals,m){
 
 function renderResult(session){
   const m=session.m, diags=session.diags, nd=nextDrill(diags);
-  const thin=m.words<MIN_WORDS;
+  const gap=missing(session);
   const rows=METRICS.map(def=>{
     const v=m[def.k];
-    if(typeof v!=='number'||!isFinite(v))return '';
-    if(thin&&def.needsWords){
+    const why=withheldWhy(def,gap);
+    if(why){
       return '<div class="metric"><div class="mhead">'+
         '<span class="mname">'+esc(def.name)+'</span>'+
         '<span class="mval" style="color:var(--muted); font-size:14px">withheld</span></div>'+
-        '<p class="mnote">Needs a transcript. Nothing was captured this session, so this would read as a perfect score rather than no score.</p></div>';
+        '<p class="mnote">'+esc(why)+'</p></div>';
     }
+    if(typeof v!=='number'||!isFinite(v))return '';
     const cls=scoreOf(def,v);
     const b=baseline(def.k);
     const clamp=x=>Math.max(0,Math.min(1,(x-def.lo)/(def.hi-def.lo)));
@@ -908,7 +964,11 @@ function renderResult(session){
   $('v-result').innerHTML=`
     <article class="card pad">
       <span class="eyebrow">${esc(session.drillName)} · ${Math.round(m.durationMs/1000)}s · ${m.words} words</span>
-      ${session.wordsOk===false?`<div class="notice" style="margin-top:12px"><b>Only half this session was recorded</b>The microphone worked — pitch, pauses and ending strength below are real. Speech recognition captured nothing${session.srError?' ('+esc(session.srError)+')':''}, so every word-based measure is withheld.</div>`:''}
+      ${(session.mode==='voice')
+        ? `<div class="verdict" style="margin-top:12px"><h3>Voice session</h3><p>Pitch, pauses and ending strength were measured. No transcript, so the word-based measures are withheld rather than guessed${session.hasAudio?' — the recording is saved below':''}.</p></div>`
+        : (session.wordsOk===false
+          ? `<div class="notice" style="margin-top:12px"><b>Nothing was transcribed</b>The recogniser ran${session.srError?' and reported: '+esc(session.srError):' but returned no words'}. Try Check transcription on the Today screen, or run this drill in Voice mode instead.</div>`
+          : '')}
       <div class="stack" style="margin-top:13px">
         ${diags.map(d=>`<div class="verdict"><h3>${esc(d.title)}</h3><p>${esc(d.body)}</p></div>`).join('')}
       </div>
@@ -923,8 +983,10 @@ function renderResult(session){
 
     <article class="card pad">
       <span class="eyebrow">Transcript</span>
-      <p class="mnote" style="margin:9px 0 12px">Highlighted words are fillers and hedges found in the text. Filled pauses (um, uh) are counted from the audio and do not appear here — the recognizer strips them.</p>
-      <div class="transcript">${marked||'<span style="color:var(--muted)">Nothing was transcribed.</span>'}</div>
+      <p class="mnote" style="margin:9px 0 12px">${session.mode==='voice'
+        ? 'This session measured audio only.'
+        : 'Highlighted words are fillers and hedges found in the text. Filled pauses (um, uh) cannot be counted in Words mode — the recogniser strips them and the app has no access to the audio.'}</p>
+      <div class="transcript">${marked||`<span style="color:var(--muted)">${session.mode==='voice'?'Voice mode does not transcribe. Run the drill in Words mode to see the text.':'Nothing was transcribed.'}</span>`}</div>
       <details style="margin-top:16px">
         <summary>Send this to Claude for a read on the content</summary>
         <div class="body">
@@ -933,6 +995,7 @@ function renderResult(session){
             <button class="btn ghost sm" id="copy-packet">Copy packet</button>
             <button class="btn ghost sm" id="dl-packet">Download</button>
           </div>
+          ${session.hasAudio?'<button class="btn ghost sm" id="dl-audio" style="margin-top:10px">Save the recording</button><p class="mnote" style="margin-top:9px">Send the audio along with the packet and Claude can measure what this mode could not — including vowel formants, which is the real way to look at pronunciation.</p>':''}
         </div>
       </details>
     </article>
@@ -940,6 +1003,16 @@ function renderResult(session){
     <button class="btn ghost" id="back-today">Done</button>`;
 
   $('back-today').onclick=()=>{currentDrill=todaysDrill();currentPrompt=pick(currentDrill);renderToday();show('today');};
+  const dlAudio=$('dl-audio');
+  if(dlAudio)dlAudio.onclick=async()=>{
+    if(!lastAudio){ toast('The recording is only kept until you leave this screen.'); return; }
+    const ext=(lastAudio.type||'').includes('mp4')?'mp4':((lastAudio.type||'').includes('ogg')?'ogg':'webm');
+    const name='articulation-'+dayKey(session.ts)+'.'+ext;
+    const dl=await claudeUse('downloads');
+    if(!dl){ fallbackBlob(name,lastAudio); return; }
+    try{ await dl.save({filename:name,data:lastAudio}); }
+    catch(e){ if(e&&e.code==='declined')return; fallbackBlob(name,lastAudio); }
+  };
   $('copy-packet').onclick=()=>{
     navigator.clipboard.writeText(packet(session)).then(()=>toast('Packet copied.'),()=>toast('Clipboard blocked — use Download instead.'));
   };
@@ -977,18 +1050,20 @@ function packet(s){
   L.push('');
   L.push('| Measure | Value | My baseline |');
   L.push('|---|---|---|');
-  const thin=m.words<MIN_WORDS;
+  const gap=missing(s);
   for(const d of METRICS){
-    const v=m[d.k]; if(typeof v!=='number'||!isFinite(v))continue;
-    if(thin&&d.needsWords){ L.push('| '+d.name+' | withheld, no transcript | — |'); continue; }
+    const v=m[d.k];
+    const why=withheldWhy(d,gap);
+    if(why){ L.push('| '+d.name+' | withheld | '+why+' |'); continue; }
+    if(typeof v!=='number'||!isFinite(v))continue;
     const b=baseline(d.k);
     L.push('| '+d.name+' | '+fmtMetric(d,v)+' '+d.unit+' | '+(b!==null?fmtMetric(d,b)+' '+d.unit:'not yet set')+' |');
   }
-  if(s.wordsOk===false){
-    L.push('');
-    L.push('> Speech recognition captured nothing this session'+(s.srError?' (error: '+s.srError+')':'')+
-           '. Audio measurements are real; word-based measures are withheld.');
-  }
+  L.push('');
+  L.push('> Session mode: '+(s.mode||'words')+
+    ((s.mode||'words')==='words'
+      ? '. This phone will not let speech recognition and audio capture share the microphone, so this session measured words only — pitch, pauses and ending strength were not recorded.'
+      : '. Audio only — no transcript was produced.'+(s.hasAudio?' An audio file was saved and may be attached separately.':'')));
   L.push('');
   L.push('## What the app flagged');
   L.push('');
@@ -1002,6 +1077,11 @@ function packet(s){
   L.push('');
   L.push('I am training articulation and structure, ten minutes a day. The numbers above cover delivery mechanics only. What I need from you is the part the app cannot see: was the answer actually organized, did it answer the question that was asked, did the claim get the support it needed, and where would a skeptical listener push back? Be direct about what was weak before telling me what worked.');
   return L.join('\n');
+}
+function fallbackBlob(name,blob){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
 }
 function fallbackDownload(name,text){
   const blob=new Blob([text],{type:'text/markdown'});
@@ -1037,30 +1117,45 @@ function pick(d){return d.prompts[Math.floor(Math.random()*d.prompts.length)];}
 async function start(){
   const drill=currentDrill;
 
-  rec={active:true,drill,prompt:currentPrompt,
+  rec={active:true,drill,prompt:currentPrompt,mode,
        frames:[],chunks:[],interim:'',wordEvents:[],seen:0,
        t0:performance.now(),raf:0,lastFrame:-1,sr:null,
-       heard:false,srState:'starting',srError:null,deafWarned:false,
-       ctx:null,stream:null,an:null,buf:null};
+       heard:false,srState:mode==='words'?'starting':'off',srError:null,deafWarned:false,
+       ctx:null,stream:null,an:null,buf:null,mr:null,blobs:[],audioBlob:null};
 
   $('rec-label').textContent='Recording · '+drill.name;
   $('clock-note').textContent=drill.seconds+' second target · finish whenever you are done';
-  $('livetext').innerHTML='<span class="ph">Your words appear here as you speak.</span>';
-  $('l-wpm').textContent='—'; $('l-fill').textContent='0'; $('l-pause').textContent='0';
+  $('livetext').innerHTML=mode==='words'
+    ? '<span class="ph">Your words appear here as you speak.</span>'
+    : '<span class="ph">Voice mode. Nothing is transcribed — the audio is being measured and saved.</span>';
+  $('l-wpm').textContent='—'; $('l-fill').textContent=mode==='words'?'0':'—'; $('l-pause').textContent=mode==='words'?'—':'0';
   const bandLo=(135-90)/(240-90)*100, bandHi=(175-90)/(240-90)*100;
   $('paceband').style.left=bandLo+'%'; $('paceband').style.width=(bandHi-bandLo)+'%';
   $('subsys').innerHTML='';
   $('live').classList.remove('hidden');
   document.body.style.overflow='hidden';
 
-  await startRecognition();
-
-  let stream=null;
-  try{
-    stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:false}});
-  }catch(e){
-    // recognition may hold the microphone exclusively; that is survivable
-    if(rec.srState!=='listening'){
+  if(mode==='words'){
+    const ok=await startRecognition();
+    if(!ok&&rec.srState==='error'){
+      // nothing will be captured at all; do not let him talk into a void
+      rec.active=false;
+      $('live').classList.add('hidden');
+      document.body.style.overflow='';
+      const el=$('mic-warn');
+      el.className='notice';
+      el.innerHTML='<b>Words could not be captured</b>'+
+        esc(SR_ERRORS[rec.srError]||('The recogniser reported: '+(rec.srError||'nothing')+'.'))+
+        '<div class="fix"><ol><li>Switch to Voice mode and run the drill there — pitch, pauses and ending strength still work, and the recording is saved for Claude.</li></ol></div>';
+      el.classList.remove('hidden');
+      window.scrollTo(0,0);
+      return;
+    }
+  }else{
+    let stream=null;
+    try{
+      stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:false}});
+    }catch(e){
       rec.active=false;
       $('live').classList.add('hidden');
       document.body.style.overflow='';
@@ -1068,9 +1163,6 @@ async function start(){
       window.scrollTo(0,0);
       return;
     }
-  }
-
-  if(stream){
     try{
       const AC=window.AudioContext||window.webkitAudioContext;
       const ctx=new AC();
@@ -1080,7 +1172,17 @@ async function start(){
       an.fftSize=2048; an.smoothingTimeConstant=0;
       src.connect(an);
       rec.ctx=ctx; rec.stream=stream; rec.an=an; rec.buf=new Float32Array(an.fftSize);
-    }catch(e){ rec.stream=stream; rec.an=null; }
+    }catch(e){ rec.stream=stream; }
+    // keep the audio so it can go to Claude for the analysis the app cannot do
+    try{
+      const mt=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'].find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported(t));
+      if(mt){
+        const mr=new MediaRecorder(stream,{mimeType:mt});
+        mr.ondataavailable=e=>{ if(e.data&&e.data.size)rec.blobs.push(e.data); };
+        mr.start(1000);
+        rec.mr=mr;
+      }
+    }catch(e){ rec.mr=null; }
   }
 
   paintSubsys();
@@ -1090,11 +1192,18 @@ async function start(){
 function paintSubsys(){
   const audioOn=!!rec.an;
   const srOn=rec.srState==='listening';
-  const label={starting:'connecting',listening:'listening',error:'failed',unsupported:'unavailable',ended:'stopped'}[rec.srState]||rec.srState;
-  $('subsys').innerHTML=
-    '<span class="chip '+(audioOn?'on':'off')+'">audio '+(audioOn?'on':'off')+'</span>'+
-    '<span class="chip '+(srOn?'on':'off')+'">words '+label+'</span>'+
-    (rec.srError?'<span class="chip off">'+esc(rec.srError)+'</span>':'');
+  const label={starting:'connecting',listening:'listening',error:'failed',unsupported:'unavailable',ended:'stopped',off:'off this session'}[rec.srState]||rec.srState;
+  const chips=[];
+  if(rec.mode==='words'){
+    chips.push('<span class="chip '+(srOn?'on':'off')+'">words '+label+'</span>');
+    chips.push('<span class="chip">audio off this session</span>');
+  }else{
+    chips.push('<span class="chip '+(audioOn?'on':'off')+'">audio '+(audioOn?'on':'off')+'</span>');
+    chips.push('<span class="chip '+(rec.mr?'on':'')+'">'+(rec.mr?'saving recording':'not saving')+'</span>');
+    chips.push('<span class="chip">words off this session</span>');
+  }
+  if(rec.srError)chips.push('<span class="chip off">'+esc(rec.srError)+'</span>');
+  $('subsys').innerHTML=chips.join('');
 }
 
 const SR_ERRORS={
@@ -1268,6 +1377,7 @@ function updateLive(el){
 function teardown(){
   rec.active=false;
   cancelAnimationFrame(rec.raf);
+  if(rec.mr&&rec.mr.state!=='inactive'){ try{rec.mr.stop();}catch(e){} }
   if(rec.sr){ const r=rec.sr; rec.sr=null; try{r.stop();}catch(e){} }
   if(rec.stream)rec.stream.getTracks().forEach(t=>t.stop());
   if(rec.ctx&&rec.ctx.state!=='closed')rec.ctx.close().catch(()=>{});
@@ -1276,25 +1386,41 @@ function teardown(){
   document.body.style.overflow='';
 }
 
-function stop(){
+async function stop(){
   if(!rec.active)return;
   const durationMs=performance.now()-rec.t0;
   if(rec.interim.trim())rec.chunks.push(rec.interim.trim());
-  const snapshot={frames:rec.frames,chunks:rec.chunks.slice(),wordEvents:rec.wordEvents,drill:rec.drill,prompt:rec.prompt,
-                  audioOk:rec.frames.length>0,wordsOk:rec.heard,srError:rec.srError,srState:rec.srState};
+
+  // let MediaRecorder emit its final chunk before the stream is torn down
+  let audioBlob=null;
+  if(rec.mr&&rec.mr.state!=='inactive'){
+    audioBlob=await new Promise(res=>{
+      const mr=rec.mr;
+      const done=()=>res(rec.blobs.length?new Blob(rec.blobs,{type:mr.mimeType||'audio/webm'}):null);
+      mr.onstop=done;
+      try{ mr.stop(); }catch(e){ done(); }
+      setTimeout(done,1500);
+    });
+  }
+
+  const snap={frames:rec.frames,chunks:rec.chunks.slice(),wordEvents:rec.wordEvents,
+              drill:rec.drill,prompt:rec.prompt,mode:rec.mode,
+              wordsOk:rec.heard,srError:rec.srError};
   teardown();
 
-  const m=analyze({frames:snapshot.frames,frameMs:FRAME_MS,chunks:snapshot.chunks,wordEvents:snapshot.wordEvents,durationMs});
+  const m=analyze({frames:snap.frames,frameMs:FRAME_MS,chunks:snap.chunks,wordEvents:snap.wordEvents,durationMs});
   const session={
-    ts:Date.now(), drillId:snapshot.drill.id, drillName:snapshot.drill.name, drillTrains:snapshot.drill.trains,
-    prompt:snapshot.prompt, transcript:snapshot.chunks.join(' '), m, diags:[],
-    audioOk:snapshot.audioOk, wordsOk:snapshot.wordsOk, srError:snapshot.srError
+    ts:Date.now(), drillId:snap.drill.id, drillName:snap.drill.name, drillTrains:snap.drill.trains,
+    prompt:snap.prompt, transcript:snap.chunks.join(' '), m, diags:[],
+    mode:snap.mode, wordsOk:snap.wordsOk, srError:snap.srError, hasAudio:!!audioBlob
   };
-  session.diags=diagnose(m,snapshot.drill);
+  session.diags=diagnose(m,Object.assign({},snap.drill,{_mode:snap.mode}));
   sessions.push(session); save();
+  lastAudio=audioBlob;                 // held in memory only, never stored
   renderResult(session); renderToday(); show('result');
   window.scrollTo(0,0);
 }
+let lastAudio=null;
 
 function abort(){ teardown(); show('today'); }
 
@@ -1507,6 +1633,8 @@ document.querySelectorAll('nav button').forEach(b=>{ b.onclick=()=>show(b.datase
 $('go').onclick=start;
 $('stop').onclick=stop;
 $('abort').onclick=abort;
+$('mode-words').onclick=()=>setMode('words');
+$('mode-voice').onclick=()=>setMode('voice');
 $('mictest').onclick=micTest;
 $('srtest').onclick=srTest;
 $('reroll').onclick=()=>{
