@@ -1,0 +1,665 @@
+<title>One Hour on the Page</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: one narrow reading column, three views (Course / Toolkit / Checker), week accordions, a "today" card on top. Palette matches the sister app, Ten Minutes Out Loud. */
+:root{
+  --ground:#EDF1F0; --surface:#FFFFFF; --surface-2:#F5F8F7;
+  --ink:#16211F; --ink-2:#3C4C49; --muted:#63726F; --line:#D3DCDA;
+  --accent:#0E6B67; --accent-soft:#DBEBE9; --accent-ink:#0A4F4C; --on-accent:#FFFFFF;
+  --signal:#BE4620; --signal-soft:#FAE4DB;
+  --good:#2C7A50; --warn:#9C7213; --warn-soft:#F6EBCF;
+  --shadow:0 1px 2px rgba(16,32,30,.05), 0 8px 24px -12px rgba(16,32,30,.18);
+  --f-display:Archivo,"IBM Plex Sans",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0B1413; --surface:#111D1B; --surface-2:#162422;
+    --ink:#E3EDEA; --ink-2:#B4C6C2; --muted:#849995; --line:#22322F;
+    --accent:#48C9BD; --accent-soft:#12312F; --accent-ink:#7FDCD2; --on-accent:#06201E;
+    --signal:#FF8355; --signal-soft:#33201A;
+    --good:#5FBF87; --warn:#D3A945; --warn-soft:#2E2610;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 28px -14px rgba(0,0,0,.7);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0B1413; --surface:#111D1B; --surface-2:#162422;
+  --ink:#E3EDEA; --ink-2:#B4C6C2; --muted:#849995; --line:#22322F;
+  --accent:#48C9BD; --accent-soft:#12312F; --accent-ink:#7FDCD2; --on-accent:#06201E;
+  --signal:#FF8355; --signal-soft:#33201A;
+  --good:#5FBF87; --warn:#D3A945; --warn-soft:#2E2610;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 28px -14px rgba(0,0,0,.7);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--ground)}
+h1,h2,h3,h4{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:-.015em;line-height:1.2}
+p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+@media (prefers-reduced-motion:reduce){*{transition-duration:.01ms!important}}
+.wrap{max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 64px}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+header.top{padding-block:28px 8px;display:grid;gap:10px}
+header.top h1{font-size:clamp(28px,6vw,40px)}
+header.top .lede{color:var(--ink-2);max-width:60ch}
+.books{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.book{font-size:13px;padding:4px 10px;border:1px solid var(--line);border-radius:999px;color:var(--ink-2);background:var(--surface)}
+
+nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--ground);display:flex;gap:4px;padding-block:10px;border-bottom:1px solid var(--line);margin-bottom:20px}
+nav.tabs a{font-family:var(--f-display);font-weight:600;font-size:15px;color:var(--muted);text-decoration:none;padding:8px 14px;border-radius:8px}
+nav.tabs a[aria-current="page"]{color:var(--accent-ink);background:var(--accent-soft)}
+
+.progress{display:grid;gap:8px;margin-bottom:18px}
+.bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+.progress .row{display:flex;justify-content:space-between;font-size:14px;color:var(--ink-2)}
+
+.hour{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:24px}
+.hour div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px;font-size:13px;color:var(--ink-2);min-width:0}
+.hour b{display:block;font-family:var(--f-mono);font-size:12px;color:var(--accent-ink);font-weight:600}
+@media (max-width:520px){.hour{grid-template-columns:repeat(2,1fr)}}
+
+.today{background:var(--surface);border:1.5px solid var(--accent);border-radius:14px;padding:18px;box-shadow:var(--shadow);margin-bottom:28px;display:grid;gap:12px}
+.today .eyebrow{color:var(--accent-ink)}
+
+.week{border-top:1px solid var(--line)}
+.week>button{width:100%;text-align:left;display:flex;align-items:baseline;gap:12px;padding:16px 0}
+.week>button .wk{font-family:var(--f-mono);font-size:13px;color:var(--muted);min-width:56px}
+.week>button h2{font-size:19px;flex:1;min-width:0}
+.week>button .count{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+.week .theme{color:var(--ink-2);font-size:15px;margin:-6px 0 12px 68px}
+.week .sessions{display:grid;gap:10px;padding-bottom:18px}
+@media (max-width:520px){.week .theme{margin-left:0}}
+
+.session{background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.session>summary{list-style:none;cursor:pointer;display:flex;gap:12px;align-items:center;padding:14px 16px}
+.session>summary::-webkit-details-marker{display:none}
+.session .sid{font-family:var(--f-mono);font-size:12px;color:var(--muted);min-width:34px}
+.session .stitle{flex:1;font-weight:600;min-width:0}
+.session .tick{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line);flex:none;display:grid;place-items:center;font-size:13px;color:transparent}
+.session.done .tick{background:var(--good);border-color:var(--good);color:var(--on-accent)}
+.session.done .stitle{color:var(--muted)}
+.sbody{padding:0 16px 16px;display:grid;gap:14px}
+.block{display:grid;gap:4px}
+.block h4{font-family:var(--f-mono);font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--accent-ink);font-weight:600}
+.block p,.block li{color:var(--ink-2)}
+.block ul{margin:0;padding-left:20px}
+.ex{display:grid;gap:6px;background:var(--surface-2);border-radius:10px;padding:12px}
+.ex .before,.ex .after{font-size:15px;padding-left:28px;position:relative}
+.ex .before::before,.ex .after::before{position:absolute;left:0;top:1px;font-family:var(--f-mono);font-size:11px;font-weight:600;padding:1px 4px;border-radius:4px}
+.ex .before::before{content:"WAS";color:var(--signal);background:var(--signal-soft)}
+.ex .after::before{content:"NOW";color:var(--good);background:var(--accent-soft)}
+.ex .before{color:var(--ink-2)}
+.trap{background:var(--warn-soft);border-radius:10px;padding:10px 12px;font-size:15px;color:var(--ink)}
+.trap b{font-family:var(--f-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--warn);margin-right:6px}
+.tag{font-family:var(--f-mono);font-size:11.5px;color:var(--muted)}
+.btn{font-family:var(--f-display);font-weight:600;font-size:15px;padding:9px 16px;border-radius:9px;background:var(--accent);color:var(--on-accent);justify-self:start}
+.btn.ghost{background:transparent;color:var(--accent-ink);border:1.5px solid var(--accent)}
+
+/* Toolkit */
+.tool{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:14px;display:grid;gap:10px}
+.tool h2{font-size:19px}
+.tool p,.tool li{color:var(--ink-2)}
+.tool ol,.tool ul{margin:0;padding-left:20px;display:grid;gap:4px}
+.template{font-family:var(--f-mono);font-size:14px;background:var(--surface-2);border-radius:8px;padding:12px;color:var(--ink);white-space:pre-wrap}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th,td{text-align:left;padding:7px 10px 7px 0;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--f-mono);font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+td:first-child{color:var(--signal);white-space:nowrap}
+td:nth-child(2){color:var(--good)}
+td:nth-child(3){color:var(--ink-2)}
+
+/* Checker */
+textarea{width:100%;min-height:200px;font:15px/1.55 var(--f-body);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;resize:vertical}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-block:16px}
+.metric{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;display:grid;gap:2px}
+.metric .v{font-family:var(--f-mono);font-size:24px;font-weight:600;font-variant-numeric:tabular-nums}
+.metric .k{font-size:13px;color:var(--muted)}
+.metric .hint{font-size:12.5px;color:var(--ink-2)}
+.metric.warn .v{color:var(--warn)}
+.metric.ok .v{color:var(--good)}
+.marked{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;line-height:1.8}
+mark{background:var(--warn-soft);color:var(--ink);border-bottom:2px solid var(--warn);border-radius:2px;padding:0 1px}
+mark.nom{background:transparent;border-bottom:2px dotted var(--accent)}
+.long{background:var(--signal-soft);border-radius:3px}
+.flags{display:grid;gap:6px;margin-top:14px;padding:0;list-style:none}
+.flags li{font-size:14.5px;color:var(--ink-2);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 12px}
+.flags li b{color:var(--ink)}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--muted);margin:10px 0}
+.note{font-size:14px;color:var(--muted);margin-top:12px;max-width:62ch}
+.copyrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.copied{font-size:13px;color:var(--good)}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <span class="eyebrow">8 weeks · 40 sessions · 60 minutes a day</span>
+    <h1>One Hour on the Page</h1>
+    <p class="lede">A writing course for grant proposals and reviews in marine conservation, built for a Spanish speaker who already knows the science and wants the English to stop getting in the way.</p>
+    <div class="books">
+      <span class="book">Olson · Houston, We Have a Narrative</span>
+      <span class="book">Schimel · Writing Science</span>
+    </div>
+  </header>
+
+  <nav class="tabs" aria-label="Sections">
+    <a href="#course" data-view="course">Course</a>
+    <a href="#toolkit" data-view="toolkit">Toolkit</a>
+    <a href="#check" data-view="check">Checker</a>
+  </nav>
+
+  <!-- COURSE -->
+  <section id="v-course" data-v="course">
+    <div class="progress">
+      <div class="row"><span id="pText">0 of 40 sessions done</span><span class="mono" id="pPct">0%</span></div>
+      <div class="bar"><i id="pBar"></i></div>
+    </div>
+
+    <div class="hour" aria-label="How each hour is split">
+      <div><b>0–15</b>Listen. Audiobook chapter, notebook open.</div>
+      <div><b>15–45</b>Drill. The exercise for the day.</div>
+      <div><b>45–55</b>Apply. Same move on your real document.</div>
+      <div><b>55–60</b>Log. One pattern you caught today.</div>
+    </div>
+
+    <div class="today" id="today"></div>
+    <div id="weeks"></div>
+  </section>
+
+  <!-- TOOLKIT -->
+  <section id="v-toolkit" data-v="toolkit" hidden>
+    <div class="tool">
+      <h2>The ABT (Olson)</h2>
+      <div class="template">[Context] AND [more context],
+BUT [the problem or gap],
+THEREFORE [what you will do].</div>
+      <p>The Dobzhansky template finds your one word: "Nothing in ______ makes sense except in the light of ______." The ABT is the sentence. A short hero's journey (ordinary world, problem, what you did, what you came back with) is the paragraph.</p>
+    </div>
+
+    <div class="tool">
+      <h2>OCAR and LD-R (Schimel)</h2>
+      <ul>
+        <li><b>Opening:</b> the problem space the reader already cares about.</li>
+        <li><b>Challenge:</b> the specific gap or question. This is your "but".</li>
+        <li><b>Action:</b> what you will do to answer it.</li>
+        <li><b>Resolution:</b> what we will know or have when you finish.</li>
+      </ul>
+      <p>LD-R (Lead, Development, Resolution) puts the punchline first. Use it where the reader is impatient: summaries, aims pages, review summaries.</p>
+    </div>
+
+    <div class="tool">
+      <h2>Sentence checklist</h2>
+      <ol>
+        <li>Does the sentence start with something the reader already knows?</li>
+        <li>Does it end on the new or important information?</li>
+        <li>Is the verb within the first 8–10 words?</li>
+        <li>Is the action in the verb, not hidden in a -tion or -ment noun?</li>
+        <li>Is it one idea? Over 35 words needs a reason.</li>
+        <li>Is every "this" followed by a noun?</li>
+        <li>Is each key term the same word every time?</li>
+        <li>Does the verb match the strength of the evidence?</li>
+      </ol>
+    </div>
+
+    <div class="tool">
+      <h2>False friends in grant writing</h2>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Spanish-English</th><th>English</th><th>Comes from</th></tr></thead>
+        <tbody>
+          <tr><td>actual / actually</td><td>current / currently</td><td>actual, actualmente</td></tr>
+          <tr><td>eventual / eventually</td><td>possible / if needed</td><td>eventual</td></tr>
+          <tr><td>realize (an activity)</td><td>carry out, or just the verb</td><td>realizar</td></tr>
+          <tr><td>assist to a meeting</td><td>attend a meeting</td><td>asistir</td></tr>
+          <tr><td>capacitation</td><td>training, capacity building</td><td>capacitación</td></tr>
+          <tr><td>formation</td><td>training, education</td><td>formación</td></tr>
+          <tr><td>compromise</td><td>commitment</td><td>compromiso</td></tr>
+          <tr><td>sensibilize</td><td>raise awareness</td><td>sensibilizar</td></tr>
+          <tr><td>diffusion</td><td>outreach, dissemination</td><td>difusión</td></tr>
+          <tr><td>punctual</td><td>specific, one-off</td><td>puntual</td></tr>
+          <tr><td>in base to</td><td>based on</td><td>en base a</td></tr>
+          <tr><td>integral</td><td>comprehensive</td><td>integral</td></tr>
+          <tr><td>informations, evidences</td><td>information, evidence</td><td>informaciones</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+
+    <div class="tool">
+      <h2>Verb and preposition patterns</h2>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Avoid</th><th>Use</th><th>Note</th></tr></thead>
+        <tbody>
+          <tr><td>depends of</td><td>depends on</td><td>depender de</td></tr>
+          <tr><td>consists in</td><td>consists of</td><td>consistir en</td></tr>
+          <tr><td>allows to restore</td><td>allows us to restore</td><td>allow needs an object, or -ing</td></tr>
+          <tr><td>during 10 years</td><td>for 10 years</td><td>durante + length of time</td></tr>
+          <tr><td>since 10 years</td><td>for 10 years / since 2016</td><td>since + a point in time</td></tr>
+          <tr><td>different to</td><td>different from</td><td>safest in formal US writing</td></tr>
+          <tr><td>in order to</td><td>to</td><td>shorter, same meaning</td></tr>
+          <tr><td>due to the fact that</td><td>because</td><td>debido a que</td></tr>
+          <tr><td>is important</td><td>it is important</td><td>English needs the subject</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+
+    <div class="tool">
+      <h2>Review template</h2>
+      <div class="template">1. SUMMARY (2–3 sentences, your own words)
+   What they propose, why, and how.
+
+2. MAJOR STRENGTHS (tie each to a scoring criterion)
+
+3. MAJOR CONCERNS (for each: what, where, why it matters, a fix)
+
+4. MINOR POINTS (one line each)
+
+5. OVERALL (one ABT: strengths AND fit, BUT main risk,
+   THEREFORE score / recommendation)</div>
+      <p><b>Phrases that work:</b> "The proposal would be stronger if…" · "It is unclear how…" · "I could not find…" · "This is a major concern because…" · "A minor point:" · "The applicants should clarify…" · "This aim is well justified by…"</p>
+    </div>
+
+    <div class="tool">
+      <h2>Ask Claude for feedback</h2>
+      <p>Reading about writing won't fix syntax on its own. Feedback on your own sentences will. Paste this before any text you want edited.</p>
+      <div class="template" id="fbPrompt">Edit the text below for clarity and English grammar. I'm a native Spanish speaker writing grant proposals for marine conservation. Keep my voice and my technical terms. Show each change as WAS → NOW and name the rule behind it (stress position, nominalization, article, false friend, preposition, sentence length, etc.). At the end, list the 3 patterns I repeat most.</div>
+      <div class="copyrow"><button class="btn ghost" id="copyFb" type="button">Copy prompt</button><span class="copied" id="copiedMsg" hidden>Copied</span></div>
+    </div>
+  </section>
+
+  <!-- CHECKER -->
+  <section id="v-check" data-v="check" hidden>
+    <p style="color:var(--ink-2);margin-bottom:12px">Paste a page of your writing. The checker counts sentence length, your "and / but / therefore" balance, noun-heavy words, and common Spanish-English traps. The sample text below is an invented example, not your writing.</p>
+    <label for="txt" class="eyebrow">Your text</label>
+    <textarea id="txt"></textarea>
+    <div class="metrics" id="metrics"></div>
+    <div class="legend">
+      <span><mark>trap</mark> Spanish-English or filler pattern</span>
+      <span><mark class="nom">noun</mark> possible hidden verb</span>
+      <span><span class="long">sentence</span> over 35 words</span>
+    </div>
+    <div class="marked" id="marked"></div>
+    <ul class="flags" id="flags"></ul>
+    <p class="note">This is a pattern counter, not a grammar engine. It will flag some fine sentences and miss some broken ones. Use it to compare your own drafts over time: Day 1 against Day 40.</p>
+  </section>
+</div>
+
+<script>
+const WEEKS = [
+{n:1, title:"Story before sentences", theme:"Olson. Before fixing grammar, give every text a spine. Most bad sentences come from not knowing what the paragraph is for.", s:[
+ {t:"Take your baseline", listen:"Olson, opening chapters: why science needs narrative.",
+  learn:"You can't measure recovery without a baseline survey. Same here.",
+  drill:"Pick the last proposal section or review you wrote in English, 300–500 words. Don't edit it. Paste it into the Checker and write down: average sentence length, longest sentence, buts per 100 ands, nouns per 100 words, trap count. Call this Baseline A.",
+  apply:"In 15 minutes, without stopping, write 200 words on \"What my project does and why it matters\" for a program officer who isn't a coral scientist. Save it as Baseline B."},
+ {t:"And, But, Therefore", listen:"Olson on the ABT and the And-And-And problem.",
+  learn:"An AAA text is a list of true facts with no tension. Reviewers stop paying attention. The ABT adds one turn (the but) and one consequence (the therefore). It's the shortest complete story.",
+  ex:[["Coral cover in the Florida Keys has declined, and we have a nursery, and we will outplant 10,000 corals.","Acropora cover in the Florida Keys has collapsed, and natural recovery has been minimal. But many outplanted corals die during marine heat waves. Therefore, we will test whether outplanting heat-tolerant genotypes before summer improves survival."]],
+  drill:"Write five ABTs, three sentences max each: your current project, a coral nursery, a bleaching response, a community program, a monitoring program.",
+  apply:"Find the \"but\" in Baseline B. If there isn't one, that's your diagnosis."},
+ {t:"One word, one sentence, one paragraph", listen:"Olson on the WSP model.",
+  learn:"Word: the Dobzhansky template gives you the one theme that holds the project together. Sentence: the ABT. Paragraph: a compressed hero's journey. Each level expands the one before it.",
+  drill:"Fill in: \"Nothing in our restoration program makes sense except in the light of ______.\" Then write the ABT. Then a 5–6 sentence paragraph: the normal situation, the problem, what you did, what you came back with.",
+  apply:"Write your one word at the top of your next proposal draft. Every section should serve it. Sections that don't are candidates for cutting."},
+ {t:"Too little story, too much story", listen:"Olson on the narrative spectrum and the narrative index.",
+  learn:"AAA is flat. But a text with a \"but\" in every sentence is just as hard to follow, because the reader can't tell which turn matters. One clear turn per paragraph is enough.",
+  trap:"Stacking sin embargo, no obstante and por otro lado translates into \"however… nevertheless… on the other hand\" in three sentences. The reader loses the thread.",
+  drill:"Find a funded abstract: NOAA Coral Reef Conservation Program, NFWF, or a paper abstract in Restoration Ecology or Coral Reefs. Mark every and, but and therefore. Is there one clear turn?",
+  apply:"Rewrite one AAA paragraph of your own as an ABT."},
+ {t:"Week 1 rewrite", listen:"Catch up on any Olson chapter you missed.",
+  learn:"Reading aloud finds bad sentences faster than reading silently. Where you run out of breath or stumble, the sentence is too long or badly ordered.",
+  drill:"Rewrite Baseline B with your one word, an ABT as the first three sentences, and one clear turn. Read it aloud. Mark every place you stumble and fix those first.",
+  apply:"Send Baseline B and your rewrite to Claude with the feedback prompt from the Toolkit. Log the three patterns it says you repeat."}
+]},
+{n:2, title:"The shape of a proposal", theme:"Schimel. Proposals and papers are stories with a fixed shape. Learn the shape and the reviewer stops working to follow you.", s:[
+ {t:"The tired reader", listen:"Schimel, early chapters: writing for the reader, and why science writing is storytelling.",
+  learn:"A panel reviewer reads your proposal as one of many, often late, with a scoring sheet open. They aren't reading to learn. They're reading to score. Clarity is a scoring advantage, not a matter of taste.",
+  drill:"Take the most technical sentence in your current proposal. Rewrite it for a smart reviewer from another field, say a fisheries economist.",
+  apply:"List the three things a reviewer must remember after closing your proposal. If you can't name three, the proposal can't either."},
+ {t:"OCAR and LD-R", listen:"Schimel on story structures: OCAR and LD-R.",
+  learn:"OCAR: Opening, Challenge, Action, Resolution. It builds to the point. LD-R: Lead, Development, Resolution. It gives the point first. Full proposals follow OCAR logic, but summaries and aims pages need the lead up front.",
+  drill:"Outline your current proposal in OCAR, one sentence per letter. Then reorder it as LD-R. Which version tells the reviewer faster why to fund you?",
+  apply:"Write a four-sentence project summary in the shape that won."},
+ {t:"Openings", listen:"Schimel on openings.",
+  learn:"The first sentence is the most valuable real estate you have. Funnel from a problem the funder already cares about to your specific question in two or three sentences.",
+  ex:[["Coral reefs are among the most biodiverse and important ecosystems on the planet and provide many services to humans.","Caribbean restoration programs now outplant hundreds of thousands of corals a year, but most stop monitoring within 18 months."]],
+  note:"The second version's monitoring claim is in line with Boström-Einarsson et al. 2020 (PLoS ONE), who found most restoration projects were monitored for under 18 months. [Likely] Check the paper before you use it.",
+  drill:"Write three different first sentences for your proposal. Keep the one that names a problem specific to your funder's priority.",
+  apply:"Replace the opening of Baseline B."},
+ {t:"The challenge is your \"but\"", listen:"Schimel on framing the question.",
+  learn:"The gap must be specific and answerable within the grant. \"Little is known about coral restoration\" is not a gap. \"We don't know whether outplant density affects predation by fireworms on Acropora cervicornis\" is.",
+  trap:"\"Existe poca información sobre…\" becomes \"There is few informations about…\". Write \"Few studies have tested whether…\" or \"We don't know whether…\" instead.",
+  drill:"Write your gap three ways: as a question ending in a question mark, as a \"But we don't know…\" sentence, and as a testable hypothesis. Could your project answer it in the grant period?",
+  apply:"Put the gap sentence at the end of your first paragraph. You'll see why in Week 4."},
+ {t:"The one-page summary", listen:"Schimel on proposals.",
+  learn:"The summary or aims page is where many reviewers decide before reading the rest. [Likely] Shape: problem (2–3 sentences), gap, goal, 2–4 objectives each with an expected outcome, then why it matters to this funder.",
+  drill:"Draft a one-page summary for your current or next proposal. 400 words maximum.",
+  apply:"Read it aloud, then send it to Claude for edits."}
+]},
+{n:3, title:"Paragraphs", theme:"Schimel. A paragraph is a unit of thought. English readers take the first sentence as the promise and skim the rest.", s:[
+ {t:"One paragraph, one job", listen:"Schimel on paragraphs.",
+  learn:"The first sentence says what the paragraph is about. The middle supports it. The last sentence lands it or hands off to the next one.",
+  trap:"Many Spanish-trained writers build long paragraphs that move through several ideas before reaching the point. [Likely] An English reviewer reads sentence one, skims, and moves on, so the point gets missed.",
+  drill:"Take three paragraphs of your writing. Write each one's job in eight words or fewer. If you need \"and\" to describe it, split the paragraph.",
+  apply:"Split or merge your Background section accordingly."},
+ {t:"Paragraph shapes", listen:"Schimel on paragraph structure.",
+  learn:"Point first: claim, then evidence. Use it for most proposal paragraphs. Funnel: broad to narrow, for introductions. Mini-OCAR: setting, problem, action, result, for justifying a method or presenting a result.",
+  drill:"Write one paragraph in each shape about the same fact, for example heat-stress mortality of outplants.",
+  apply:"Which shape does your Background section use? Is it the right one for the job?"},
+ {t:"Linking without signposts", listen:"Schimel on flow between paragraphs.",
+  learn:"Flow comes from content. The end of one paragraph sets up the start of the next, usually by repeating the key idea. Words like \"Moreover\", \"In addition\" and \"On the other hand\" often cover a missing logical link.",
+  trap:"Además, Asimismo and Por otro lado at the start of every paragraph read as filler in English.",
+  ex:[["…survival dropped to 30% after the 2023 heat wave. Moreover, genotype also matters.","…survival dropped to 30% after the 2023 heat wave. That loss was not even across genotypes."]],
+  drill:"Delete every connector at the start of a paragraph in one page. Where the text no longer flows, fix the content link instead of putting the connector back.",
+  apply:"Do the same on your proposal Background."},
+ {t:"Reverse outline", listen:"Re-listen to Schimel's paragraph chapter, or catch up.",
+  learn:"Copy only the first sentence of every paragraph into a list. Read the list. It should read like a summary of the section.",
+  drill:"Reverse-outline a full proposal, yours or a past one.",
+  apply:"Rewrite every topic sentence that failed the test."},
+ {t:"The approach section", listen:"Schimel on methods and approach.",
+  learn:"Each paragraph is one activity. First sentence: what and why. Middle: how. Last sentence: what it produces and which objective it serves.",
+  drill:"Rewrite one page of your methods or approach this way.",
+  apply:"Send it to Claude. Log the repeated patterns."}
+]},
+{n:4, title:"How sentences carry weight", theme:"Schimel, building on Gopen and Swan. This is the week that most directly fixes \"bad syntax\".", s:[
+ {t:"Topic and stress positions", listen:"Schimel on sentence structure. Optional: Gopen and Swan (1990), \"The Science of Scientific Writing\", American Scientist. It's free online and short.",
+  learn:"English readers expect the start of a sentence to name what it's about (known information) and the end to deliver the news. Spanish word order is more flexible, so new information often lands early or in the middle.",
+  ex:[["A higher survival was observed in the outplants located at 10 m in comparison with those at 3 m.","Outplants at 10 m survived better than those at 3 m."]],
+  drill:"Rewrite ten sentences from your text so the last words carry the important information.",
+  apply:"Read only the last three or four words of each sentence on your summary page. Are those words worth stressing?"},
+ {t:"Subject and verb together", listen:"Schimel on sentence structure, continued.",
+  learn:"The reader holds everything in memory until the verb arrives. A long subject before the verb is one of the most common problems in Spanish-English science writing. [Likely] Keep the subject short and get to the verb fast.",
+  ex:[["The implementation of restoration activities in degraded reefs of the Mexican Caribbean with the participation of local fishers and dive operators will contribute to the recovery of the ecosystem.","Local fishers and dive operators will help restore degraded reefs in the Mexican Caribbean."]],
+  drill:"Find five sentences where the main verb comes after word ten. Fix them.",
+  apply:"Check every objective in your proposal for the same problem."},
+ {t:"Put the action in the verb", listen:"Schimel on nominalizations and word choice.",
+  learn:"Turning verbs into nouns (-tion, -ment, -ance) drains the action out of a sentence and forces weak verbs like make, carry out and perform to do the work.",
+  trap:"Realizar la evaluación de, llevar a cabo el monitoreo de, hacer una comparación entre. Each one has a single English verb hiding inside it.",
+  ex:[["We will carry out the evaluation of survival and the monitoring of growth.","We will evaluate survival and monitor growth."],["The project will have an impact on the reduction of algal cover.","The project will reduce algal cover."]],
+  drill:"Run a page through the Checker. Convert at least half of the dotted words back into verbs.",
+  apply:"Do the same with your objectives and summary."},
+ {t:"Active and passive", listen:"Schimel on voice.",
+  learn:"Passive isn't wrong. Use it when the actor doesn't matter and it keeps the topic at the start. In proposals, though, reviewers want to know who does what. Write \"We will\".",
+  trap:"Se realizó, se observó, se determinó become stacks of \"It was observed that…\". They hide the actor and push the verb late.",
+  ex:[["It was decided that the outplanting will be carried out in April.","We will outplant in April, before water temperatures peak."]],
+  drill:"Find every \"It was / It will be … that\" in a page and rewrite it.",
+  apply:"Make sure every activity in your proposal has a named actor: we, our partners, the field team."},
+ {t:"Length and the one-idea rule", listen:"Catch up, or re-listen to the sentence-structure chapter.",
+  learn:"Aim for an average around 20 words with real variety. Anything over 35 needs a reason. [Likely — common guidance, not a law] Joining two complete sentences with a comma is a comma splice, and it's an error in English.",
+  trap:"Spanish tolerates long chains joined by commas, que and lo cual. In English, \", which\" chains do the same damage.",
+  ex:[["The corals survived well, this shows the method works, which is important for scaling.","The corals survived well. That result suggests the method can scale."]],
+  drill:"Break the three longest sentences in Baseline A. Fix every comma splice you find.",
+  apply:"Run Baseline A and your edit through the Checker. Compare average length and longest sentence."}
+]},
+{n:5, title:"Spanish-English traps", theme:"The grammar that a native speaker never notices and a reviewer always does.", s:[
+ {t:"Old-to-new chains and \"this\"", listen:"Schimel on flow within paragraphs.",
+  learn:"Each sentence should pick up where the previous one ended. And never leave \"this\" alone at the start of a sentence: say this what.",
+  ex:[["Bleaching killed 40% of nursery stock. This shows the need for deeper nurseries.","Bleaching killed 40% of nursery stock. This loss shows that shallow nurseries are exposed."]],
+  drill:"Fix every bare \"This\" and \"It\" at the start of a sentence in one page.",
+  apply:"Check that each sentence in your summary begins with something the previous sentence introduced."},
+ {t:"Articles and uncountable nouns", listen:"No audiobook today. Use the 15 minutes to read your proposal aloud.",
+  learn:"General plural nouns take no article in English: \"Coral reefs are declining\", not \"The coral reefs are declining\". Use \"the\" only for a specific set: \"the corals we outplanted\". Information, evidence, research, equipment, knowledge, feedback and funding have no plural.",
+  trap:"Spanish uses the article for general statements (Los arrecifes de coral están…). It's the most frequent error in Spanish-English writing. [Likely]",
+  drill:"Circle every \"the\" before a plural noun on one page. Specific set or general category? Delete the general ones.",
+  apply:"Search your current documents for informations, evidences, researches, equipments and feedbacks."},
+ {t:"False friends", listen:"No audiobook. Read one funded proposal or abstract in your field and note its verbs.",
+  learn:"Some words look the same in both languages and mean different things. In grant writing the expensive ones are actual, eventual, realize, assist, capacitation and compromise. The full list is in the Toolkit.",
+  ex:[["Actually, the project has realized the capacitation of 40 fishers.","The project has trained 40 fishers so far."]],
+  drill:"Search your last three documents for every word in the Toolkit's false-friends table. Fix them.",
+  apply:"Add any new ones you find to your own list."},
+ {t:"Prepositions and verb patterns", listen:"No audiobook. Read your Week 2 summary aloud.",
+  learn:"Prepositions don't translate one to one. Learn them as fixed pairs: depend on, consist of, focus on, result in, allow us to, for ten years, since 2016.",
+  drill:"Write ten sentences about your project, each using one pattern from the Toolkit table. Send them to Claude.",
+  apply:"Search your proposal for \"allow to\", \"during\" + years, and \"depend of\"."},
+ {t:"Hidden subjects and throat-clearing", listen:"Schimel on concision.",
+  learn:"Spanish drops the subject (\"Es importante\"). English needs it (\"It is important\"). But most of those sentences shouldn't exist. \"It is important to mention that\" adds nothing. Delete it and say the thing.",
+  ex:[["It is important to mention that, in this sense, due to the fact that sea temperatures are rising, the nursery must be relocated.","Because sea temperatures are rising, we will move the nursery to 15 m."]],
+  drill:"Delete or repair every throat-clearing phrase on one page. Count the words you saved.",
+  apply:"Run the page through the Checker before and after."}
+]},
+{n:6, title:"Words", theme:"Precision, concision and calibrated claims. This is where reviewers decide whether to trust you.", s:[
+ {t:"Specific beats general", listen:"Schimel on word choice.",
+  learn:"Reviewers trust numbers, places and dates. General words read as vague plans.",
+  ex:[["The project will improve reef health in the area.","The project will raise live coral cover from 4% to 10% across 3 ha at two sites by 2029."]],
+  note:"The numbers are illustrative.",
+  drill:"Rewrite every objective in your proposal so each one has a number, a place and a date.",
+  apply:"Do the same with your expected outcomes."},
+ {t:"Cut 20%", listen:"Schimel on concision.",
+  learn:"Most drafts lose a fifth of their words without losing content. Cut redundant pairs (future plans, completely eliminate, analyze and evaluate), stacked hedges (may possibly suggest) and empty openers.",
+  drill:"Take one page. Cut 20% without losing any information. Count before and after.",
+  apply:"Do the same with a section that is over the funder's word limit."},
+ {t:"One term, one meaning", listen:"Schimel on consistent terminology.",
+  learn:"In science, a new word signals a new thing. If you switch between outplants, transplants, colonies and fragments, the reviewer assumes four different things.",
+  trap:"Spanish schooling teaches you to avoid repeating words. Science writing rewards repeating key terms.",
+  drill:"Make a glossary of your ten key terms. Enforce it through one full document.",
+  apply:"Add the glossary to your proposal template so the whole team uses it."},
+ {t:"Claims that match the evidence", listen:"Schimel on hedging and confidence.",
+  learn:"Match the verb to the data. Strong data: show, demonstrate. Moderate: indicate, suggest. Speculation: may, could. Overclaiming costs credibility. Too many hedges make you sound unsure of your own work.",
+  drill:"Tag each claim in your Background as Certain, Likely or Guessing. Choose the verb to match.",
+  apply:"Check that every claim tagged Certain has a citation."},
+ {t:"Full edit pass", listen:"Re-listen to any Schimel chapter you found hard.",
+  learn:"Editing in one pass for everything doesn't work. Do separate passes: structure, then paragraphs, then sentences, then words.",
+  drill:"Edit one page with four separate passes, using the Toolkit's sentence checklist on the third. Time each pass.",
+  apply:"Send the before and after to Claude. Compare its list of repeated patterns with the one from Week 1."}
+]},
+{n:7, title:"The full proposal", theme:"Putting the pieces together for a real call.", s:[
+ {t:"Read the call like a reviewer", listen:"Schimel on proposals and what reviewers look for.",
+  learn:"The scoring criteria are the reviewer's checklist. Use the funder's words as headings where the format allows it. Don't make reviewers hunt for what they are paid to score.",
+  drill:"Take a real call (NOAA CRCP, NFWF, a foundation). Build a table: criterion, where it's answered in your proposal, the exact sentence that answers it.",
+  apply:"Rewrite any criterion that has no clear sentence."},
+ {t:"Summary at three lengths", listen:"Olson, re-listen to the ABT chapter.",
+  learn:"If you can say it in 50 words, the 250-word version gets easier.",
+  drill:"Write your project summary at 250 words, then 150, then 50.",
+  apply:"Use the 50-word version as the first paragraph of your cover letter or email to the program officer."},
+ {t:"Objectives and theory of change", listen:"No audiobook. Read the call's guidance on objectives and outcomes.",
+  learn:"Goal: the long-term change you contribute to. Objectives: what this grant achieves. Outputs: things produced (5,000 outplants). Outcomes: change (survival, cover, skills). Mixing outputs and outcomes is a frequent reviewer complaint. [Likely]",
+  drill:"Write one \"If we…, then…, because…\" theory of change sentence. Write three SMART objectives.",
+  apply:"Label every result in your proposal as output or outcome."},
+ {t:"Risks and plan B", listen:"Schimel on proposals, continued.",
+  learn:"Reviewers look for what could go wrong. Naming the risk and your response builds trust. It doesn't weaken the proposal.",
+  ex:[["We expect good survival.","If a bleaching alert reaches Level 2 during Year 2, we will delay outplanting and hold stock in the deep nursery."]],
+  drill:"Write four risks, each with likelihood and response, in full sentences.",
+  apply:"Add the strongest two to your approach section."},
+ {t:"Budget justification and partners", listen:"No audiobook. Read a successful budget justification if you have one.",
+  learn:"Budget justification is writing too. Each line ties money to an activity and an objective. For partners, say exactly what each one does.",
+  ex:[["Field supplies: $12,000.","Field supplies ($12,000): tags, epoxy and nursery trees for 5,000 outplants (Objective 2)."]],
+  drill:"Write five budget-justification lines in that format.",
+  apply:"Rewrite partner descriptions so each has a verb and a deliverable."}
+]},
+{n:8, title:"Reviewing, then the capstone", theme:"Switch sides. Writing reviews trains the eye that improves your own proposals.", s:[
+ {t:"How to write a review", listen:"Schimel on how reviewers read.",
+  learn:"Start with a two or three sentence summary in your own words. It proves you understood and helps the panel. Then strengths and concerns, each tied to a scoring criterion. The score must match the text.",
+  drill:"Write the summary paragraph for a proposal you have access to: a past one of yours, a colleague's, or a published one.",
+  apply:"Compare it with the applicant's own summary. Which is clearer?"},
+ {t:"Comments that help", listen:"No audiobook. Re-read the review template in the Toolkit.",
+  learn:"A useful comment says what, where, why it matters, and how to fix it. Be direct about the proposal and respectful of the people.",
+  ex:[["The methods are weak.","The monitoring plan (Section 3.2) tracks survival for only 12 months. Heat-stress mortality usually peaks in late summer, so an 18-month minimum would show whether the selected genotypes really perform better."]],
+  trap:"Watch for two extremes: too many softeners (\"With all respect, perhaps it could maybe be considered…\") or translated bluntness that sounds rude in English.",
+  drill:"Rewrite five vague comments, from real reviews you received or wrote, into specific ones.",
+  apply:"Save your best phrasings to your phrase bank."},
+ {t:"A full review", listen:"No audiobook.",
+  learn:"Use the template and stay within one page. Reviewers who write more don't help the panel more.",
+  drill:"Write a complete one-page review in 45 minutes using the template.",
+  apply:"Send it to Claude and ask whether the score matches the text."},
+ {t:"Capstone rewrite", listen:"No audiobook.",
+  learn:"Everything at once, on the text you started with.",
+  drill:"Rewrite Baseline A from Day 1: structure, paragraphs, sentences, words.",
+  apply:"Read it aloud. Fix every stumble."},
+ {t:"Measure and keep going", listen:"No audiobook.",
+  learn:"The course ends. The habit shouldn't.",
+  drill:"Run Baseline A and your capstone through the Checker. Compare every number with Day 1. Write an ABT about your own progress.",
+  apply:"Set a 20-minute daily routine: rewrite one paragraph from a real document, run it through the Checker, log one pattern."}
+]}
+];
+
+const KEY="ohp-done-v1";
+let done={};
+try{done=JSON.parse(localStorage.getItem(KEY)||"{}")||{}}catch(e){done={}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(done))}catch(e){}}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
+
+function bodyHTML(w,s,id){
+  let h="";
+  h+=`<div class="block"><h4>Listen · 15 min</h4><p>${esc(s.listen)}</p></div>`;
+  h+=`<div class="block"><h4>The idea</h4><p>${esc(s.learn)}</p></div>`;
+  if(s.ex) s.ex.forEach(([a,b])=>{h+=`<div class="ex"><div class="before">${esc(a)}</div><div class="after">${esc(b)}</div></div>`});
+  if(s.note) h+=`<p class="tag">${esc(s.note)}</p>`;
+  if(s.trap) h+=`<div class="trap"><b>Spanish trap</b>${esc(s.trap)}</div>`;
+  h+=`<div class="block"><h4>Drill · 30 min</h4><p>${esc(s.drill)}</p></div>`;
+  h+=`<div class="block"><h4>Apply · 10 min</h4><p>${esc(s.apply)}</p></div>`;
+  h+=`<button class="btn ${done[id]?"ghost":""}" type="button" data-toggle="${id}">${done[id]?"Mark as not done":"Mark session done"}</button>`;
+  return h;
+}
+
+function render(){
+  const all=[];WEEKS.forEach(w=>w.s.forEach((s,i)=>all.push({w,s,id:`${w.n}.${i+1}`})));
+  const n=all.filter(x=>done[x.id]).length;
+  document.getElementById("pText").textContent=`${n} of ${all.length} sessions done`;
+  const pct=Math.round(n/all.length*100);
+  document.getElementById("pPct").textContent=pct+"%";
+  document.getElementById("pBar").style.width=pct+"%";
+
+  const next=all.find(x=>!done[x.id]);
+  const t=document.getElementById("today");
+  if(next){
+    t.innerHTML=`<span class="eyebrow">Today · Week ${next.w.n}, session ${next.id}</span><h2 style="font-size:22px">${esc(next.s.t)}</h2>`+bodyHTML(next.w,next.s,next.id);
+  }else{
+    t.innerHTML=`<span class="eyebrow">Course complete</span><h2 style="font-size:22px">All 40 sessions done</h2><p style="color:var(--ink-2)">Keep the 20-minute routine from session 8.5, and run the Checker on every new proposal.</p>`;
+  }
+
+  const open=new Set([...document.querySelectorAll(".week.open")].map(e=>e.dataset.w));
+  if(!open.size&&next) open.add(String(next.w.n));
+  const W=document.getElementById("weeks");
+  W.innerHTML=WEEKS.map(w=>{
+    const c=w.s.filter((s,i)=>done[`${w.n}.${i+1}`]).length;
+    const isOpen=open.has(String(w.n));
+    return `<div class="week ${isOpen?"open":""}" data-w="${w.n}">
+      <button type="button" aria-expanded="${isOpen}" data-week="${w.n}"><span class="wk">Week ${w.n}</span><h2>${esc(w.title)}</h2><span class="count">${c}/5</span></button>
+      <div ${isOpen?"":"hidden"}><p class="theme">${esc(w.theme)}</p><div class="sessions">${
+        w.s.map((s,i)=>{const id=`${w.n}.${i+1}`;return `<details class="session ${done[id]?"done":""}"><summary><span class="sid">${id}</span><span class="stitle">${esc(s.t)}</span><span class="tick" aria-label="${done[id]?"done":"not done"}">✓</span></summary><div class="sbody">${bodyHTML(w,s,id)}</div></details>`}).join("")
+      }</div></div></div>`;
+  }).join("");
+}
+
+document.addEventListener("click",e=>{
+  const tg=e.target.closest("[data-toggle]");
+  if(tg){const id=tg.dataset.toggle;done[id]=!done[id];if(!done[id])delete done[id];save();render();return}
+  const wk=e.target.closest("[data-week]");
+  if(wk){const box=wk.parentElement;box.classList.toggle("open");const o=box.classList.contains("open");wk.setAttribute("aria-expanded",o);wk.nextElementSibling.hidden=!o}
+});
+
+/* Views */
+function show(){
+  let v=(location.hash||"#course").slice(1);
+  if(!["course","toolkit","check"].includes(v)) v="course";
+  document.querySelectorAll("[data-v]").forEach(s=>s.hidden=s.dataset.v!==v);
+  document.querySelectorAll("nav.tabs a").forEach(a=>{if(a.dataset.view===v)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")});
+}
+window.addEventListener("hashchange",show);
+
+/* Copy prompt */
+document.getElementById("copyFb").addEventListener("click",()=>{
+  const txt=document.getElementById("fbPrompt").textContent;
+  const ok=()=>{const m=document.getElementById("copiedMsg");m.hidden=false;setTimeout(()=>m.hidden=true,1800)};
+  const fallback=()=>{const r=document.createRange();r.selectNodeContents(document.getElementById("fbPrompt"));const s=getSelection();s.removeAllRanges();s.addRange(r)};
+  try{navigator.clipboard.writeText(txt).then(ok,fallback)}catch(e){fallback()}
+});
+
+/* Checker */
+const TRAPS=[
+ [/\bactual(ly)?\b/gi,"If you mean actual/actualmente, use current/currently."],
+ [/\beventual(ly)?\b/gi,"If you mean eventual/eventualmente, use possible / if needed."],
+ [/\brealiz(e|es|ed|ing)\b/gi,"If you mean realizar, use carry out, or better, the main verb."],
+ [/\bassist(s|ed|ing)? (to|at)\b/gi,"asistir a = attend."],
+ [/\bcapacitation\b/gi,"Use training or capacity building."],
+ [/\bsensibiliz\w*/gi,"Use raise awareness."],
+ [/\bin base (to|of)\b/gi,"Use based on."],
+ [/\b(informations|evidences|researches|equipments|knowledges|feedbacks|advices|fundings)\b/gi,"Uncountable noun: no plural."],
+ [/\bdepends? of\b|\bdepending of\b/gi,"depend on."],
+ [/\bconsists? in\b/gi,"consist of."],
+ [/\ballow(s|ed|ing)? to\b|\bpermit(s|ted)? to\b/gi,"allow us to restore / allows restoring."],
+ [/\bduring (\d+|two|three|four|five|six|ten|several) (years|months|weeks)\b/gi,"Length of time: for, not during."],
+ [/\bin order to\b/gi,"Usually just to."],
+ [/\bdue to the fact that\b/gi,"Use because."],
+ [/\bit is (important|necessary|worth) to (mention|note|highlight|say|point out)( that)?\b/gi,"Throat-clearing. Delete it and say the thing."],
+ [/\bit should be (noted|mentioned) that\b/gi,"Throat-clearing. Delete it."],
+ [/\bin this (sense|context|regard)\b/gi,"Often deletable (en este sentido)."],
+ [/\b(with respect to|in relation to|with regard to)\b/gi,"Try about, for or on."],
+ [/\b(moreover|additionally|on the other hand|in addition)\b/gi,"Signpost connector. Is there a real logical link?"],
+ [/\b(it|there) (was|were|is|will be|has been) (observed|found|determined|decided|considered|established) that\b/gi,"Passive se-construction. Who did it? Use we."],
+ [/\b(carry|carries|carried|carrying) out (the|a|an) \w+(tion|ment|sis)\b/gi,"Hidden verb. Use the verb itself."],
+ [/\b(make|makes|made|making|perform|performs|performed|conduct|conducted|realize|realized) (a|an|the) \w+(tion|ment|sis|ison)\b/gi,"Hidden verb. Use the verb itself."],
+ [/\b(have|has|had) an (impact|effect) on\b/gi,"Try affect, reduce, increase…"],
+ [/(^|[.!?]\s+)(This|It) (is|was|shows|suggests|means|allows|demonstrates)\b/g,"Bare this/it. This what?"],
+ [/\bthe (coral reefs|corals|reefs|fishers|mangroves|seagrasses|communities) (are|have|provide)\b/gi,"General statement? Drop the."],
+ [/\b(compromise)\b/gi,"If you mean compromiso, use commitment."],
+ [/\bpunctual\b/gi,"If you mean puntual, use specific or one-off."],
+ [/\bformation\b/gi,"If you mean formación, use training."]
+];
+const NOM=/\b[a-z]{3,}(tion|sion|ment|ance|ence)s?\b/gi;
+const NOM_OK=new Set(["environment","environments","government","sentence","science","evidence","experience","sediment","sediments","department","mention","question","questions","population","populations","station","stations","section","sections","nation","location","locations","difference","differences","conference","instance","distance","distances","presence","absence","abundance","importance","fragment","fragments","equipment","sequence","sequences","element","elements","attention","variance","significance","funding","condition","conditions","temperature","ocean"]);
+const ABBR=/\b(e\.g|i\.e|et al|cf|approx|Fig|Figs|vs|Dr|No|ca)\./g;
+
+const SAMPLE=`Actually, the coral reefs of the Caribbean are suffering a strong degradation due to the fact that the bleaching events are more frequent. It is important to mention that our organization has realized the implementation of a nursery program during 10 years, which has allowed to produce more than 50,000 fragments, and the capacitation of local fishers in the monitoring of the outplants, the results have been very positive for the communities. Moreover, there are few informations about the survival of the transplants after the first year. This is a problem.`;
+
+function analyze(){
+  const raw=document.getElementById("txt").value;
+  const prot=raw.replace(ABBR,m=>m.replace(/\./g,"․"));
+  const sents=[];const re=/[^.!?]+[.!?]+["')\]]*|[^.!?]+$/g;let m;
+  while((m=re.exec(prot))){const t=m[0];if(t.trim())sents.push({start:m.index,end:m.index+t.length,text:t})}
+  const words=raw.match(/[A-Za-zÀ-ÿ0-9'’-]+/g)||[];
+  const wc=words.length;
+  const lens=sents.map(s=>(s.text.match(/[A-Za-zÀ-ÿ0-9'’-]+/g)||[]).length);
+  const avg=sents.length?wc/sents.length:0;
+  const longest=lens.length?Math.max(...lens):0;
+  const over=lens.filter(l=>l>35).length;
+  const ands=(raw.match(/\band\b/gi)||[]).length;
+  const buts=(raw.match(/\b(but|however|yet|although|despite|nevertheless)\b/gi)||[]).length;
+  const thers=(raw.match(/\b(therefore|thus|so|hence|consequently)\b/gi)||[]).length;
+  const noms=[];NOM.lastIndex=0;while((m=NOM.exec(raw))){if(!NOM_OK.has(m[0].toLowerCase()))noms.push({s:m.index,e:m.index+m[0].length,k:"nom"})}
+  const traps=[];TRAPS.forEach(([rx,msg])=>{rx.lastIndex=0;let x;while((x=rx.exec(raw))){let s=x.index,txt=x[0];const lead=txt.match(/^[\s.!?]+/);if(lead){s+=lead[0].length;txt=txt.slice(lead[0].length)}traps.push({s,e:s+txt.length,k:"trap",msg,txt});if(x[0].length===0)rx.lastIndex++}});
+  const nomRate=wc?noms.length/wc*100:0;
+  const ni=ands?Math.round(buts/ands*100):(buts?100:0);
+
+  const mt=[
+    {v:wc,k:"words"},
+    {v:avg.toFixed(1),k:"avg words / sentence",hint:"aim ~15–25",cls:avg>28?"warn":(avg?"ok":"")},
+    {v:longest,k:"longest sentence",hint:"over 35 needs a reason",cls:longest>35?"warn":(longest?"ok":"")},
+    {v:over,k:"sentences over 35",cls:over?"warn":"ok"},
+    {v:`${ands}/${buts}/${thers}`,k:"and / but / therefore",hint:`buts per 100 ands: ${ni}`},
+    {v:nomRate.toFixed(1),k:"-tion/-ment nouns per 100 words",hint:"lower is usually livelier",cls:nomRate>6?"warn":(wc?"ok":"")},
+    {v:traps.length,k:"trap patterns",cls:traps.length?"warn":"ok"}
+  ];
+  document.getElementById("metrics").innerHTML=mt.map(x=>`<div class="metric ${x.cls||""}"><span class="v">${esc(x.v)}</span><span class="k">${esc(x.k)}</span>${x.hint?`<span class="hint">${esc(x.hint)}</span>`:""}</div>`).join("");
+
+  // build highlighted text
+  const spans=[...traps,...noms].sort((a,b)=>a.s-b.s||(a.k==="trap"?-1:1));
+  const kept=[];let lastE=-1;spans.forEach(s=>{if(s.s>=lastE){kept.push(s);lastE=s.e}});
+  const longSet=sents.filter((s,i)=>lens[i]>35);
+  let out="",pos=0;
+  const inLong=i=>longSet.some(s=>i>=s.start&&i<s.end);
+  // walk char ranges: simple approach, wrap long sentences, then marks inside
+  const pieces=[];kept.forEach(k=>{if(k.s>pos)pieces.push({s:pos,e:k.s});pieces.push(k);pos=k.e});if(pos<raw.length)pieces.push({s:pos,e:raw.length});
+  pieces.forEach(p=>{
+    const txt=esc(raw.slice(p.s,p.e));
+    let inner=p.k==="trap"?`<mark title="${esc(p.msg)}">${txt}</mark>`:p.k==="nom"?`<mark class="nom">${txt}</mark>`:txt;
+    if(inLong(p.s)) inner=`<span class="long">${inner}</span>`;
+    out+=inner;
+  });
+  document.getElementById("marked").innerHTML=out.replace(/\n/g,"<br>")||`<span style="color:var(--muted)">Paste text above to see it marked up here.</span>`;
+  const seen=new Map();traps.forEach(t=>{const key=t.msg;if(!seen.has(key))seen.set(key,[]);seen.get(key).push(t.txt)});
+  document.getElementById("flags").innerHTML=[...seen].map(([msg,arr])=>`<li><b>${esc([...new Set(arr.map(a=>a.trim()))].join(", "))}</b> — ${esc(msg)}</li>`).join("");
+}
+let tm;document.getElementById("txt").addEventListener("input",()=>{clearTimeout(tm);tm=setTimeout(analyze,250)});
+
+const ta=document.getElementById("txt");
+if(!ta.value) ta.value=SAMPLE;
+render();show();analyze();
+</script>
