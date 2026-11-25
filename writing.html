@@ -277,7 +277,7 @@ THEREFORE [what you will do].</div>
 
   <!-- CHECKER -->
   <section id="v-check" data-v="check" hidden>
-    <p style="color:var(--ink-2);margin-bottom:12px">Paste a page of your writing. The checker counts sentence length, your "and / but / therefore" balance, noun-heavy words, and common Spanish-English traps. The sample text below is an invented example, not your writing.</p>
+    <p style="color:var(--ink-2);margin-bottom:12px">Paste a page of your writing. The checker counts sentence length, your "and / but / therefore" balance, noun-heavy words, and common Spanish-English traps, including four patterns from your own drafts: a noun subject with a weak final verb, an ambiguous "them", a missing comma before "and" between two clauses, and "Only then," without inversion. The sample text below is an invented example, not your writing.</p>
     <label for="txt" class="eyebrow">Your text</label>
     <textarea id="txt"></textarea>
     <div class="metrics" id="metrics"></div>
@@ -601,13 +601,53 @@ const TRAPS=[
  [/\bthe (coral reefs|corals|reefs|fishers|mangroves|seagrasses|communities) (are|have|provide)\b/gi,"General statement? Drop the."],
  [/\b(compromise)\b/gi,"If you mean compromiso, use commitment."],
  [/\bpunctual\b/gi,"If you mean puntual, use specific or one-off."],
- [/\bformation\b/gi,"If you mean formación, use training."]
+ [/\bformation\b/gi,"If you mean formación, use training."],
+ [/(^|[.!?]\s+)Only then,?\s+(we|they|it|he|she|I|you|the|this|these|our|their|its)\b/g,"Only then + inversion: Only then can we… (or move it: We can then…)."],
+ [/(^|[.!?]\s+)Only (after|when|once|if|by|through|with|in|until)\b[^.!?;]{1,120}?,\s*(we|they|it|he|she|I|you|the|this|these|our|their|its)\b/g,"Only + time/condition clause needs inversion: Only after X can we… (or drop only: After X, we…)."]
 ];
+// sentence-level rules: these need context that a single regex can't see
+const WEAK_END=/\b(?:(?:can|could|will|would|may|might|must|should|shall|is|are|was|were|to|has|have|had|has been|have been)\s+)?(?:(?:be|been)\s+)?(?:take|takes|took|taken|taking)\s+place\b|\b(?:can|could|will|would|may|might|must|should|shall|is|are|was|were|to|has been|have been)\s+(?:be\s+)?(?:carried out|done|performed|conducted|made|achieved|undertaken|implemented|accomplished|realized)\b|\b(?:occur|occurs|occurred|happen|happens|happened)\b/gi;
+const PLURAL=/\b(?:the|these|those|our|their|its|local|many|several|some|all|both|other|new|few|more|most|two|three|four|five|six|ten|\d[\d,]*)\s+(?:[a-z-]+\s+)?([a-z]{3,}s)\b/gi;
+const NOT_PLURAL=/(ss|us|is|ous|ics)$/;
+const CLAUSE_AND=/\s(and)\s+(?:(?:we|they|it|he|she|I|you)\s+[a-z]|(?:the|this|these|those|our|their|its|each|all|most|some)\s+(?:[A-Za-z-]+\s+){0,3}?(?:will|would|can|could|may|might|must|should|is|are|was|were|has|have|had|did|does|do)\b)/g;
+const FINITE=/\b(is|are|was|were|has|have|had|will|would|can|could|may|might|must|should|did|does|do|we|they|[a-z]{3,}ed)\b/i;
+function sentenceRules(raw,sents){
+  const out=[];const wordsIn=t=>(t.match(/[A-Za-zÀ-ÿ0-9'’-]+/g)||[]).length;
+  sents.forEach((st,i)=>{
+    const t=raw.slice(st.start,st.end);let x;
+    // 1. nominalized subject + weak final verb
+    WEAK_END.lastIndex=0;let last=null;while((x=WEAK_END.exec(t)))last=x;
+    if(last){
+      const tail=t.slice(last.index+last[0].length);
+      const head=t.slice(0,last.index);
+      const firstWords=head.trim().split(/\s+/).slice(0,6).join(" ");
+      const nom=(firstWords.match(/\b[a-z]{3,}(tion|sion|ment|ance|ence|al)s?\b/gi)||[]).filter(w=>!NOM_OK.has(w.toLowerCase()));
+      if(nom.length&&wordsIn(tail)<=5){
+        const s=st.start+last.index;out.push({s,e:s+last[0].length,k:"trap",txt:last[0],msg:"Noun subject + weak final verb. Turn the noun into the verb and give it a real subject: ‘The selection … will take place’ → ‘We will select …’."});
+      }
+    }
+    // 2. ambiguous them: two or more plural nouns in this sentence (before them) or the one before
+    const re=/\bthem\b/gi;while((x=re.exec(t))){
+      const win=(i>0?raw.slice(sents[i-1].start,sents[i-1].end):"")+" "+t.slice(0,x.index);
+      const set=new Set();let y;PLURAL.lastIndex=0;while((y=PLURAL.exec(win))){const w=y[1].toLowerCase();if(!NOT_PLURAL.test(w))set.add(w)}
+      if(set.size>=2){const s=st.start+x.index;out.push({s,e:s+4,k:"trap",txt:"them ("+[...set].slice(-3).join(" / ")+"?)",msg:"Ambiguous them: more than one plural noun could be the referent. Repeat the noun."})}
+    }
+    // 3. and joining two full clauses without a comma
+    CLAUSE_AND.lastIndex=0;while((x=CLAUSE_AND.exec(t))){
+      const before=t.slice(0,x.index);
+      if(/[,;:]\s*$/.test(before))continue;
+      const seg=before.split(/[,;:]/).pop();
+      if(wordsIn(seg)<4||!FINITE.test(seg))continue;
+      const s=st.start+x.index+1;out.push({s,e:s+3,k:"trap",txt:"and",msg:"and joins two full clauses (each with its own subject and verb). Put a comma before and."});
+    }
+  });
+  return out;
+}
 const NOM=/\b[a-z]{3,}(tion|sion|ment|ance|ence)s?\b/gi;
 const NOM_OK=new Set(["environment","environments","government","sentence","science","evidence","experience","sediment","sediments","department","mention","question","questions","population","populations","station","stations","section","sections","nation","location","locations","difference","differences","conference","instance","distance","distances","presence","absence","abundance","importance","fragment","fragments","equipment","sequence","sequences","element","elements","attention","variance","significance","funding","condition","conditions","temperature","ocean"]);
 const ABBR=/\b(e\.g|i\.e|et al|cf|approx|Fig|Figs|vs|Dr|No|ca)\./g;
 
-const SAMPLE=`Actually, the coral reefs of the Caribbean are suffering a strong degradation due to the fact that the bleaching events are more frequent. It is important to mention that our organization has realized the implementation of a nursery program during 10 years, which has allowed to produce more than 50,000 fragments, and the capacitation of local fishers in the monitoring of the outplants, the results have been very positive for the communities. Moreover, there are few informations about the survival of the transplants after the first year. This is a problem.`;
+const SAMPLE=`Actually, the coral reefs of the Caribbean are suffering a strong degradation due to the fact that the bleaching events are more frequent. It is important to mention that our organization has realized the implementation of a nursery program during 10 years, which has allowed to produce more than 50,000 fragments, and the capacitation of local fishers in the monitoring of the outplants, the results have been very positive for the communities. Moreover, there are few informations about the survival of the transplants after the first year. This is a problem. The selection of donor colonies for the nursery will take place in March. Only then, we will compare the fragments with the wild colonies and track them every month and the team will report survival to the funder.`;
 
 function analyze(){
   const raw=document.getElementById("txt").value;
@@ -625,6 +665,7 @@ function analyze(){
   const thers=(raw.match(/\b(therefore|thus|so|hence|consequently)\b/gi)||[]).length;
   const noms=[];NOM.lastIndex=0;while((m=NOM.exec(raw))){if(!NOM_OK.has(m[0].toLowerCase()))noms.push({s:m.index,e:m.index+m[0].length,k:"nom"})}
   const traps=[];TRAPS.forEach(([rx,msg])=>{rx.lastIndex=0;let x;while((x=rx.exec(raw))){let s=x.index,txt=x[0];const lead=txt.match(/^[\s.!?]+/);if(lead){s+=lead[0].length;txt=txt.slice(lead[0].length)}traps.push({s,e:s+txt.length,k:"trap",msg,txt});if(x[0].length===0)rx.lastIndex++}});
+  traps.push(...sentenceRules(raw,sents));
   const nomRate=wc?noms.length/wc*100:0;
   const ni=ands?Math.round(buts/ands*100):(buts?100:0);
 
