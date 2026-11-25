@@ -1,5 +1,11 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#EDF1F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B1413" media="(prefers-color-scheme: dark)">
 <title>One Hour on the Page</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
@@ -139,10 +145,15 @@ mark.nom{background:transparent;border-bottom:2px dotted var(--accent)}
 .note{font-size:14px;color:var(--muted);margin-top:12px;max-width:62ch}
 .copyrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .copied{font-size:13px;color:var(--good)}
+.sister{font-family:var(--f-mono);font-size:12.5px;color:var(--accent-ink);text-decoration:none;justify-self:start}
+.sister:hover{text-decoration:underline}
 </style>
+</head>
+<body>
 
 <div class="wrap">
   <header class="top">
+    <a class="sister" href="index.html">&larr; Ten Minutes Out Loud</a>
     <span class="eyebrow">8 weeks · 40 sessions · 60 minutes a day</span>
     <h1>One Hour on the Page</h1>
     <p class="lede">A writing course for grant proposals and reviews in marine conservation, built for a Spanish speaker who already knows the science and wants the English to stop getting in the way.</p>
@@ -647,6 +658,9 @@ function analyze(){
   const inLong=i=>longSet.some(s=>i>=s.start&&i<s.end);
   // walk char ranges: simple approach, wrap long sentences, then marks inside
   const pieces=[];kept.forEach(k=>{if(k.s>pos)pieces.push({s:pos,e:k.s});pieces.push(k);pos=k.e});if(pos<raw.length)pieces.push({s:pos,e:raw.length});
+  // split plain pieces at long-sentence edges so shading stops where the sentence stops
+  const cuts=[...new Set(longSet.flatMap(s=>[s.start,s.end]))];
+  for(let i=0;i<pieces.length;i++){const p=pieces[i];if(p.k)continue;const c=cuts.find(x=>x>p.s&&x<p.e);if(c!==undefined){pieces.splice(i,1,{s:p.s,e:c},{s:c,e:p.e})}}
   pieces.forEach(p=>{
     const txt=esc(raw.slice(p.s,p.e));
     let inner=p.k==="trap"?`<mark title="${esc(p.msg)}">${txt}</mark>`:p.k==="nom"?`<mark class="nom">${txt}</mark>`:txt;
@@ -663,3 +677,5 @@ const ta=document.getElementById("txt");
 if(!ta.value) ta.value=SAMPLE;
 render();show();analyze();
 </script>
+</body>
+</html>
