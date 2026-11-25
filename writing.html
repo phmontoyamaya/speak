@@ -623,7 +623,7 @@ function sentenceRules(raw,sents){
       const firstWords=head.trim().split(/\s+/).slice(0,6).join(" ");
       const nom=(firstWords.match(/\b[a-z]{3,}(tion|sion|ment|ance|ence|al)s?\b/gi)||[]).filter(w=>!NOM_OK.has(w.toLowerCase()));
       if(nom.length&&wordsIn(tail)<=5){
-        const s=st.start+last.index;out.push({s,e:s+last[0].length,k:"trap",txt:last[0],msg:"Noun subject + weak final verb. Turn the noun into the verb and give it a real subject: "The selection … will take place" → "We will select …"."});
+        const s=st.start+last.index;out.push({s,e:s+last[0].length,k:"trap",txt:last[0],msg:"Noun subject + weak final verb. Turn the noun into the verb and give it a real subject: ‘The selection … will take place’ → ‘We will select …’."});
       }
     }
     // 2. ambiguous them: two or more plural nouns in this sentence (before them) or the one before
